@@ -2457,6 +2457,34 @@ passed over is said on stderr, never silently. `--label <name>` stamps one
 workload; `--label-from-project` uses each transcript's project directory
 name, which the config's `labels` block can map to something readable.
 
+**`--label-by-cwd <rules.json>` splits one session between two projects.** A
+person who moved between repositories without starting a new Claude Code
+session has one transcript, one project folder, and no field in it saying which
+work was which. It has a `cwd`, per line:
+
+```json
+[
+  { "prefix": "/work/trazum-pro", "label": "trazum-pro" },
+  { "prefix": "/work/trazum", "label": "trazum" }
+]
+```
+
+Longest prefix wins, so a nested project is not swallowed by the repository
+above it, and the order the rules are written in decides nothing. A directory
+no rule covers falls back to `--label` if one was given and is **unattributed**
+otherwise: a guessed label puts one project's money on another's bill, in the
+one direction nobody checks. A malformed entry is refused by number rather than
+skipped, for the same reason.
+
+A file rather than a repeated flag, because the values are absolute paths and
+every delimiter worth choosing is a character a directory is allowed to
+contain.
+
+**The directory is read and never written.** That is the contract this feature
+lives under: the converter has never emitted a `cwd`, choosing a label the
+operator wrote is a different act from emitting the path, and the test plants a
+secret in `cwd` and searches the whole output — stdout and stderr — for it.
+
 **`--state <file>` reads only what is new.** A transcript is append-only and
 can be enormous, so anything that converts it on a loop spends most of its time
 re-reading bytes that cannot have changed. The state file records where the last
@@ -2657,6 +2685,300 @@ They never enter a record, and the figure is printed beside Trazum's rather than
 inside it: two price tables summed into one total is how a report becomes
 quietly wrong. `prompt_cost_details` in particular looks like a cache split and
 is not — it is dollars, not tokens — so the cache verdicts read *cannot tell*.
+
+### What you were actually billed: `trazum reconcile`
+
+Every other door here answers *what did this usage cost at these rates*. The
+provider answers *what did we charge you*, and those are different questions
+with different numbers. The gap between them is the figure no tool gives you.
+
+```bash
+curl "https://api.anthropic.com/v1/organizations/cost_report?\
+starting_at=2026-09-01T00:00:00Z&ending_at=2026-10-01T00:00:00Z&\
+group_by[]=description" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "x-api-key: $ANTHROPIC_ADMIN_KEY" > cost.json
+
+trazum reconcile receipt.json --against cost.json
+```
+
+**The two are never added.** A provider-billed figure is printed beside
+Trazum's and never merged into it — the same rule this page already states for
+LiteLLM's `total_cost` — because two price tables summed into one number is how
+a report becomes quietly wrong. Nothing here corrects one figure with the
+other, and nothing decides which is right: they are two measurements of one
+window, and you are the one entitled to say which you trust.
+
+**The difference is attributed, when the report can attribute it.** With
+`group_by[]=description` each row says whether it was tokens, a web search, a
+code execution or a session, and whether it was batch-tier. So the difference
+comes apart into what no token rate covers, what was billed at a discount
+Trazum deliberately does not price, and a **remainder**. That last one is the
+only figure worth arguing about: the same standard-tier tokens priced two ways,
+or usage your log never saw. It is never folded into the other two, and a
+negative one is reported as it is — Trazum priced more than you were charged,
+which is a stale rate in the direction that costs you money.
+
+Without that grouping every `cost_type` and `service_tier` is `null`, and the
+run says the difference cannot be attributed rather than reporting a remainder
+that is really the whole difference wearing a smaller name.
+
+**The unit is the trap, and it is handled once.** `amount` is a decimal string
+in the currency's *lowest unit*: `"123.45"` in USD is $1.2345. Read as dollars
+it overstates a bill a hundredfold and looks entirely plausible doing it.
+
+**Three refusals.** Windows that do not line up — a receipt for one day set
+against a bill for other days is a wrong number under a right title, so nothing
+is compared. A currency that is not USD, because summing two needs a rate and
+inventing one is what this product exists not to do. And an `amount` that is
+not a number is counted rather than read as zero, since a zero quietly shrinks
+a bill.
+
+**OpenAI's cost report works too, told apart by shape.** Its buckets carry a
+numeric `start_time` where Anthropic's carry `starting_at`, and the command
+reads whichever it was handed:
+
+```bash
+curl "https://api.openai.com/v1/organization/costs?\
+start_time=1756684800&end_time=1759276800&limit=31&group_by[]=line_item" \
+  -H "Authorization: Bearer $OPENAI_ADMIN_KEY" > costs.json
+
+trazum reconcile receipt.json --against costs.json
+```
+
+Two things differ and both are said. The unit is the *other* trap: OpenAI's
+`amount` is `{"value": 0.06, "currency": "usd"}` and `value` is dollars, so
+nothing is divided — the schema's own example is the test. And the
+decomposition is thinner, because the schema names no batch: with
+`group_by[]=line_item` each row carries a `quantity_unit`, so money measured in
+`duration_seconds`, `images`, `characters` or `gibibyte_hours` is set aside as
+what no token rate covers, but a batch discount, if any, stays inside the
+remainder and the run says so. A line item whose unit is `null` is counted
+under its own name rather than guessed either way.
+
+### What the provider itself says: `trazum from-anthropic`
+
+The first converter that reads a **provider** rather than a tool sitting in
+front of one. Every other one answers *what did the calls my proxy saw cost*;
+this answers *what does Anthropic say my organisation used*, which is the
+question a finance team asks and the one no local log can answer — a log only
+knows the machines it was written on, and the console, the other team and the
+laptop nobody instrumented are not among them.
+
+```bash
+# Your own shell, your own admin credential. Trazum never sees it.
+curl "https://api.anthropic.com/v1/organizations/usage_report/messages?\
+starting_at=2026-09-01T00:00:00Z&ending_at=2026-10-01T00:00:00Z&\
+bucket_width=1d&group_by[]=model&group_by[]=service_tier" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "x-api-key: $ANTHROPIC_ADMIN_KEY" > usage.json
+
+trazum from-anthropic usage.json --label billing -o usage.jsonl
+trazum receipt usage.jsonl > receipt.json
+```
+
+**It takes the answer, never the key.** That endpoint needs an admin
+credential — `sk-ant-admin01-…`, an `org:admin` OAuth token, or an unscoped
+personal or service account key; workspace keys do not work — and the same
+credential manages the organisation's members and keys. Trazum holds no
+provider credential anywhere, which is the property the whole design exists
+for, so the request is yours to make and this command reads what came back.
+It stays a pure function of text, which is also why it is tested without a
+network.
+
+**Ask for both groupings.** `group_by[]=model` because a row without a model
+says nothing about what answered and nothing can price it. `group_by[]=service_tier`
+because batch is billed at a discount: a batch row priced from a catalogue
+rate overstates a bill by half and looks entirely right doing it. Rows at any
+tier but standard are **left out and counted**, the same way an unpriceable
+line becomes a named gap rather than a guess. Without the grouping the command
+says so and reads everything as standard, because the alternative is you
+assuming a question was answered that was never asked.
+
+**Two more things it counts rather than prices.** Web search requests are
+billed per request, not per token, so no token rate reaches them and the total
+says how many are missing. And `has_more: true` means you asked for one page of
+several: follow `next_page` until it is false, or the bill is understated by
+whatever you did not fetch.
+
+**The label is yours.** The provider knows workspaces, keys and accounts; it
+does not know what you call your projects. The account and the key are read by
+nothing — a fixture plants a marker in each and greps the output — and
+`--label` is where the project name comes from, exactly as it does for a local
+log.
+
+**One label per workspace, if you write the mapping.** `--label-by-workspace
+rules.json` takes a JSON array of `{"workspace": "wrkspc_…", "label": "name"}`
+and labels each row by the workspace it came from, falling back to `--label`
+for a workspace no rule names — better unattributed than attributed to a
+neighbour. Matched **exactly**, never by prefix: `--label-by-cwd` takes the
+longest prefix because paths nest, and two workspace ids sharing leading
+characters share nothing at all.
+
+```bash
+# rules.json
+[{"workspace": "wrkspc_01Jw…", "label": "payments"},
+ {"workspace": null,           "label": "default-workspace"}]
+```
+
+**`null` is the default workspace, and the report is asked which one it means.**
+The schema uses `null` for two different things: *not grouping by workspace*
+and *the default workspace*. Nothing on the row tells them apart, so it is
+derived from the report — if any other row carries a workspace id, grouping was
+on and a `null` is the default workspace. If none does, the rules for `null` do
+not apply and the run says the split you asked for was not made. Guessing
+either way would put money on a label nobody chose.
+
+**The instant is the bucket's.** There are no calls in this report: a bucket is
+an interval and its usage is a sum over it, so a day's usage lands at that
+day's start. Ask for `bucket_width=1h` if you want it finer.
+
+### What OpenAI says: `trazum from-openai`
+
+The same door as `from-anthropic`, for the other provider, under the same
+arrangement: your `curl`, your admin key, and this reads what came back.
+Trazum holds no provider credential and this command is a pure function of
+text, tested without a network against the endpoint's own published example.
+
+```bash
+# Unix seconds, per the schema. This is September 2026, one day per bucket.
+curl "https://api.openai.com/v1/organization/usage/completions?\
+start_time=1756684800&end_time=1759276800&bucket_width=1d&limit=31&\
+group_by[]=model&group_by[]=batch&group_by[]=service_tier" \
+  -H "Authorization: Bearer $OPENAI_ADMIN_KEY" > usage.json
+
+trazum from-openai usage.json --label billing -o usage.jsonl
+trazum receipt usage.jsonl > receipt.json
+```
+
+**The record is the OpenAI shape, because that is how this report counts.**
+The schema says `input_tokens` *includes cached and cache-write tokens*. That
+is the Chat Completions convention — `prompt_tokens` with the cached half
+inside it and `prompt_tokens_details.cached_tokens` saying how much — and the
+parser already subtracts through exactly that pair. So the record is written
+with those names. Written as Anthropic's `input_tokens` it would charge the
+cached half twice, on the largest line, and a test parses a converted record
+back to prove it does not.
+
+**Ask for three groupings.** `group_by[]=model`, or a row says nothing about
+what answered and cannot be priced. `group_by[]=batch`, because a batch job is
+billed at a discount and priced from a catalogue rate it overstates the bill
+while looking right. `group_by[]=service_tier`, because the schema does not
+enumerate the tiers and this does not either: any tier but `default` is left
+out and **named** in the summary, so you see `flex` or `priority` rather than
+a count of something unnamed. Without a grouping the run says the question was
+never asked, rather than letting you assume it was answered.
+
+**Audio and image tokens are never priced at a text rate.** `input_tokens`
+folds text, audio and image together, and the report's own split —
+`input_text_tokens`, `input_cached_text_tokens`, `output_text_tokens` — is
+how a row carrying any of them is reduced to its text part. The audio and
+image tokens become a named gap in no line of the output. Cache-write tokens
+carry no modality in the schema, so on such a row they are left out too and
+counted, rather than guessed text; a mixed row in a report without the split
+is refused whole. A text-only row is priced whole, cache writes included at
+the input rate the report itself files them under.
+
+**The label is yours, and one per project if you write it.** `user_id` and
+`api_key_id` are read by nothing — a fixture plants a marker in each and greps
+the output. `--label-by-project rules.json` takes a JSON array of
+`{"project": "proj_…", "label": "name"}`, matched exactly, falling back to
+`--label` for a project no rule names. Unlike a workspace, a `null` project
+means one thing only — the report was not grouped by project — because every
+OpenAI request belongs to a project with an id, so there is no default named
+by absence and nothing to derive.
+
+**The clock is Unix seconds, and the instant is the bucket's.** `start_time`
+is converted once; a converter that read it as milliseconds would date every
+row in 1970. A bucket is an interval, so a day's usage lands at that day's
+start; ask for `bucket_width=1h` for finer.
+
+### One door: `trazum bill`
+
+Every converter on this page has a name, and a person with a log had to know
+what their log was called before Trazum would read it. This is the door that
+does not ask.
+
+```bash
+npx @trazum/cli bill ~/.claude/projects
+npx @trazum/cli bill usage.json
+npx @trazum/cli bill exports/ --pricing-live -o receipt.json
+```
+
+It reads a file or a directory (`.json`, `.jsonl`, `.ndjson`, gzipped or
+not), tells each file's shape **from its own text** — a Claude Code
+transcript, OTel spans, a LiteLLM, Helicone or LangSmith export, an Anthropic,
+OpenAI or OpenRouter report, or a plain usage log — converts it with the same
+converter the dedicated command uses, prices it, and ends on the same receipt
+`trazum receipt` writes.
+
+**It is the dedicated commands composed, not a looser version of them.** Each
+file's rows go through `from-<shape>`'s converter, so every refusal that
+converter makes is made here: a batch row is still left out, an unnamed model
+is still unpriced. What differs is how the refusals are told. Each file gets
+one line — its shape, the records it became, how many rows were left out —
+and the dedicated command is named as the place that says why, rather than
+every converter's explanation repeated on one screen.
+
+**Three things it will not do.** Guess: a file no shape claims is named and
+kept out of the bill. Pick: a file two shapes claim is named as ambiguous and
+left alone, because whichever it chose would be a guess wearing a result's
+clothes. Merge a bill into usage: a provider's cost report is named as a bill
+rather than usage and pointed at `trazum reconcile`.
+
+A slug the bundled catalogue does not price is the receipt's usual unpriced
+gap, kept out of the total rather than costed at zero; `--pricing-live` is
+where OpenRouter's hundreds of slugs get their rates.
+
+### What the router says: `trazum from-openrouter`
+
+OpenRouter is the one provider Trazum already prices from a live catalogue:
+`--pricing-live` turns its public `/models` list into an overlay keyed by
+model slug, for hundreds of models across dozens of providers. This is the
+other half — a report to price them from, keyed by the same slugs.
+
+```bash
+# A management key, in your shell. Trazum never sees it.
+curl "https://openrouter.ai/api/v1/activity" \
+  -H "Authorization: Bearer $OPENROUTER_MANAGEMENT_KEY" > activity.json
+
+trazum from-openrouter activity.json --label billing -o usage.jsonl
+trazum receipt usage.jsonl --pricing-live > receipt.json
+```
+
+**Derived from the published schema.** `GET /api/v1/activity` answers the last
+thirty completed UTC days, one row per model per endpoint per day: `date`,
+`model`, `model_permaslug`, `endpoint_id`, `provider_name`, `usage` (cost in
+USD), `byok_usage_inference` (BYOK cost in USD), `requests`, `prompt_tokens`,
+`completion_tokens`, `reasoning_tokens`, and `workspace_id` when fetched with
+`group_by=workspace`. The endpoint's own example is the fixture.
+
+**Two figures, never added.** `usage` is what OpenRouter charged. It is summed
+and printed **beside** Trazum's catalogue-priced total — the rule this page
+states for LiteLLM's `spend` — and never merged into it. `byok_usage_inference`
+is what an upstream provider charged on your own key through OpenRouter, and is
+carried separately for the same reason. Both are summed over refused rows too,
+because a refused row was still charged for and a total that left it out would
+be understated in the direction nobody questions.
+
+**Reasoning tokens are counted, not added.** The schema does not say whether
+`completion_tokens` already includes `reasoning_tokens`, and adding them if it
+does would charge reasoning twice on exactly the models where it is the largest
+line. The count is printed so you can settle the question against your own
+invoice.
+
+**The slug, not the permaslug.** Records carry `model` (`openai/gpt-4.1`) rather
+than `model_permaslug` (`openai/gpt-4.1-2025-04-14`), because the slug is what
+the pricing overlay is keyed by and a versioned one would price nothing until
+somebody mapped it.
+
+**What does not cross.** `endpoint_id` and `provider_name` reach no record: a
+row is priced by model, and which provider served it is what `usage` already
+reflects. `workspace_id` is read only through `--label-by-workspace rules.json`,
+a JSON array of `{"workspace": "…", "label": "name"}` matched exactly, with
+`--label` as the fallback. A `null` workspace here means one thing only — the
+request did not group by workspace — so there is no default named by absence
+and nothing to derive.
 
 ### When does the switch pay: `trazum switch`
 

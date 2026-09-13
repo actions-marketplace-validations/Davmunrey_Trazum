@@ -637,6 +637,127 @@ export interface CliMessages {
    * `from-helicone` — the proxy that keeps every request it saw, so a team
    * using it already has the export.
    */
+  reconcile: {
+    noReceipt(): string;
+    noReport(): string;
+    receiptUnreadable(file: string): string;
+    notAReceipt(file: string): string;
+    reportUnreadable(file: string): string;
+    notAReport(file: string): string;
+    summary(computed: number, billed: number, difference: number): string;
+    /** Billed for what no token rate covers. Named, never blamed. */
+    notTokens(usd: number): string;
+    batch(usd: number): string;
+    /** The only figure worth arguing about, never folded into the others. */
+    remainder(usd: number): string;
+    /** Without group_by[]=description nothing can be attributed. */
+    notAttributable(): string;
+    /** The OpenAI report's equivalent: without group_by[]=line_item. */
+    notAttributableByLineItem(): string;
+    /** This provider's report never names batch, so it sits in the remainder. */
+    batchNotSeparable(): string;
+    /** Money on a line item whose unit is null: neither tokens nor not. */
+    unknownUnit(usd: number): string;
+    windowNotCovered(fromComputed: string, toComputed: string, fromBilled: string, toBilled: string): string;
+    noBilledWindow(): string;
+    otherCurrency(list: string): string;
+    truncated(): string;
+    unreadableAmount(count: number): string;
+    written(file: string): string;
+  };
+
+  fromAnthropic: {
+    noPath(): string;
+    notFound(path: string): string;
+    summary(buckets: number, rows: number): string;
+    /** The report was not grouped by model, so nothing on the row prices it. */
+    unnamedModel(count: number): string;
+    /** Batch and priority are not billed at a catalogue rate. */
+    nonStandardTier(count: number): string;
+    /** Said when the report never named a tier: the question was not asked. */
+    tierUnknown(): string;
+    /** Server tools are billed per request, and no token rate reaches them. */
+    webSearch(count: number): string;
+    /** One page of several: the bill from it is understated. */
+    truncated(): string;
+    unparseable(): string;
+    labelledByWorkspace(count: number): string;
+    /** A workspace the mapping does not name keeps --label or none. */
+    unruledWorkspace(count: number): string;
+    /** The split was asked for and the report could not make it. */
+    workspaceNotGrouped(): string;
+    rulesUnreadable(file: string): string;
+    ruleBad(file: string, at: number): string;
+    rulesEmpty(file: string): string;
+    written(file: string): string;
+  };
+
+  fromOpenai: {
+    noPath(): string;
+    notFound(path: string): string;
+    summary(buckets: number, rows: number, requests: number): string;
+    unnamedModel(count: number): string;
+    /** batch: true rows are billed at a discount no catalogue rate is. */
+    batch(count: number): string;
+    /** The report never said whether anything was batch. */
+    batchUnknown(): string;
+    /** Any tier but default, named rather than counted. */
+    nonDefaultTier(count: number, tiers: string): string;
+    tierUnknown(): string;
+    /** Rows reduced to their text part; audio and image tokens set aside. */
+    mixed(rows: number, tokens: number, cacheWrites: number): string;
+    /** Mixed rows the report gave no text split for, refused whole. */
+    unsplit(count: number): string;
+    truncated(): string;
+    unparseable(): string;
+    labelledByProject(count: number): string;
+    unruledProject(count: number): string;
+    projectNotGrouped(): string;
+    rulesUnreadable(file: string): string;
+    ruleBad(file: string, at: number): string;
+    rulesEmpty(file: string): string;
+    written(file: string): string;
+  };
+
+  bill: {
+    noPath(): string;
+    notFound(path: string): string;
+    noFiles(path: string): string;
+    /** One line per file: its shape, what it became, what was left out. */
+    file(path: string, shape: string, records: number | null, leftOut: number): string;
+    /** No shape claimed it: named, never guessed. */
+    unknown(path: string): string;
+    /** Two shapes claimed it: named, never picked between. */
+    ambiguous(path: string, shapes: string): string;
+    /** A provider's bill is not usage; reconcile is the door for it. */
+    costReport(path: string): string;
+    nothingRead(): string;
+    sources(read: number, seen: number): string;
+    /** An unpriced slug with a slash is OpenRouter's, and --pricing-live prices it. */
+    pricingLiveHint(count: number): string;
+    written(file: string): string;
+  };
+
+  fromOpenrouter: {
+    noPath(): string;
+    notFound(path: string): string;
+    summary(rows: number, days: number, requests: number): string;
+    /** What OpenRouter charged, printed beside and never merged. */
+    reportedUsage(usd: number, byokUsd: number): string;
+    /** Counted, not added: the schema does not say whether completion holds them. */
+    reasoning(tokens: number): string;
+    unnamedModel(count: number): string;
+    undated(count: number): string;
+    unparseable(): string;
+    labelledByWorkspace(count: number): string;
+    unruledWorkspace(count: number): string;
+    workspaceNotGrouped(): string;
+    rulesUnreadable(file: string): string;
+    ruleBad(file: string, at: number): string;
+    rulesEmpty(file: string): string;
+    written(file: string): string;
+  };
+
   fromHelicone: {
     noPath(): string;
     notFound(path: string): string;
@@ -710,6 +831,11 @@ export interface CliMessages {
     stateNeedsFile(): string;
     /** `--state` with nowhere to append: the records were going to stdout. */
     stateNeedsOut(): string;
+    /** The rules file could not be read as a list of prefix-and-label pairs. */
+    cwdRulesUnreadable(file: string): string;
+    cwdRuleBad(file: string, at: number): string;
+    cwdRulesEmpty(file: string): string;
+    labelledByCwd(rules: number): string;
     /** How much of the transcript was skipped, and where the next run starts. */
     resumed(skipped: number, offset: number): string;
   };

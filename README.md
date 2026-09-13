@@ -18,6 +18,19 @@ rarely the biggest.
 
 </div>
 
+## Start here: one line, nothing installed
+
+```bash
+npx @trazum/cli bill ~/.claude/projects
+```
+
+Point it at a file or a folder of whatever usage you have — Claude Code
+transcripts, OpenTelemetry spans, a LiteLLM, Helicone or LangSmith export, an
+Anthropic, OpenAI or OpenRouter usage report, or a plain usage log — and it
+tells each file's shape from its own text, prices it, and prints the receipt.
+A file it cannot read is named, never guessed at; a model it cannot price is a
+named gap, never a zero. Nothing you point it at leaves your machine.
+
 ## Your agents spend money in a loop. This prices the call before it happens.
 
 One agent costs what it costs. A fleet of them spends in a loop nobody is
@@ -41,8 +54,16 @@ claude plugin marketplace add Davmunrey/Trazum
 claude plugin install trazum@trazum
 ```
 
-That one line brings the skill and the MCP server. For any other MCP client,
-`npx -y @trazum/mcp` over stdio does the same.
+That one line brings the skill and the MCP server. Every other MCP client
+reads the same `mcpServers` JSON, so Cursor (`.cursor/mcp.json`), Windsurf,
+Claude Desktop and the rest are one paste:
+
+```json
+{ "mcpServers": { "trazum": { "command": "npx", "args": ["-y", "@trazum/mcp"] } } }
+```
+
+The server is listed on the [official MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.Davmunrey/trazum)
+as `io.github.Davmunrey/trazum`, and every release updates the listing.
 
 **[Or run it right now, without installing anything: the Playground](https://trazum.vercel.app/?tab=playground)**
 
@@ -93,7 +114,7 @@ never runs unless you ask.
                       └──────┬───────┘   zero dependencies, browser-safe
     ┌────────────┬─────────────┼─────────────┬─────────────┐
  @trazum/cli  @trazum/mcp  trazum-vscode  @trazum/web    action/
- 46 commands   MCP server    the editor      Next.js    comments on
+ 51 commands   MCP server    the editor      Next.js    comments on
               for your agents  status bar               pull requests
 
               @trazum/tokenizer-openai   optional: exact counts for OpenAI
@@ -103,7 +124,7 @@ never runs unless you ask.
 ## Contents
 
 - [What it actually does](#what-it-actually-does) — the five things, and what it refuses to touch
-- [The 46 commands](#the-46-commands): the whole surface, one line each
+- [The 51 commands](#the-51-commands): the whole surface, one line each
 - [Getting started](#getting-started) — CLI, web, the GitHub Action, pre-commit
 - [The first five minutes](#the-first-five-minutes-trazum-init) — `init`, and the four things it refuses to write
 - [Building on the format](docs/commands.md#building-on-the-format-trazum-conform) — the contracts, the guarantees, and the doctrine
@@ -212,8 +233,8 @@ Always` — each checked against your prompt before you see it, so eight survivi
 out of ten is a useful morning rather than a rewrite to read end to end.
 
 **5. Answers the questions that come before "shorten this".** Trimming one file
-is the smallest thing here. `optimize` is one of 46 commands — [the table
-above](#the-46-commands) names what each answers — because knowing a prompt
+is the smallest thing here. `optimize` is one of 51 commands — [the table
+above](#the-51-commands) names what each answers — because knowing a prompt
 is wasteful is not the same as knowing *which* prompt, *whose* change made it so,
 or whether the shorter version still works.
 
@@ -227,7 +248,7 @@ from the exit codes it is supposed to relay.
 
 ---
 
-## The 46 commands
+## The 51 commands
 
 | Command | What it answers |
 |---|---|
@@ -269,6 +290,11 @@ from the exit codes it is supposed to relay.
 | [`trazum from-claude-code`](docs/commands.md#the-agents-own-bill-trazum-from-claude-code) | What did my Claude Code sessions cost? *Reads the transcripts already on disk — the numbers only, never the words.* |
 | [`trazum from-otel`](docs/commands.md#the-universal-cost-lens-trazum-from-otel) | What did the LLM calls in my OpenTelemetry export cost? *Reads the GenAI spans any exporter already emits — the counts only, never the prompts.* |
 | [`trazum from-litellm`](docs/commands.md#the-gateway-everybody-already-runs-trazum-from-litellm) | What did the calls my LiteLLM proxy logged cost? *Reads the spend log the gateway already writes — the counts only, never the prompts, keys or addresses on the same row.* |
+| [`trazum reconcile`](docs/commands.md#what-you-were-actually-billed-trazum-reconcile) | Does what Trazum computed match what the provider charged? *Sets the two figures beside each other, never merges them, and leaves the unexplained remainder standing on its own.* |
+| [`trazum bill`](docs/commands.md#one-door-trazum-bill) | What did all of this cost? *One door: reads a file or a directory of anything the converters read, tells each file's shape from its own text, converts, prices, and ends on the receipt. A file no shape claims is named, never guessed.* |
+| [`trazum from-openrouter`](docs/commands.md#what-the-router-says-trazum-from-openrouter) | What does OpenRouter say I used? *Reads the activity report your own management key fetched, keyed by the same slugs the live pricing overlay uses; what OpenRouter charged is printed beside Trazum's figure and never merged, and reasoning tokens are counted, not added.* |
+| [`trazum from-openai`](docs/commands.md#what-openai-says-trazum-from-openai) | What does OpenAI say my organisation used? *Reads the completions usage report your own admin key fetched; the record keeps OpenAI's own cached-inside-prompt shape, batch rows and non-default tiers are left out and named, and audio or image tokens are never priced at a text rate.* |
+| [`trazum from-anthropic`](docs/commands.md#what-the-provider-itself-says-trazum-from-anthropic) | What does the provider itself say my organisation used? *Reads the usage report your own admin key fetched; Trazum never holds the credential, refuses to price a batch row at a standard rate, and labels by workspace only from a mapping you write.* |
 | [`trazum from-helicone`](docs/commands.md#the-proxy-that-kept-every-request-trazum-from-helicone) | What did the requests my Helicone proxy kept cost? *Prices the model that answered, not the one that was asked for, and counts the substitutions.* |
 | [`trazum from-langsmith`](docs/commands.md#the-tree-that-is-not-a-list-trazum-from-langsmith) | What did the model calls in my LangSmith traces cost? *Only the llm runs, because a trace is a tree and summing it bills the same tokens twice — and it refuses to price a call by the client class that made it.* |
 | [`trazum switch`](docs/commands.md#when-does-the-switch-pay-trazum-switch) | Should we move this traffic, and when does moving pay? *Measured delta, declared migration cost, break-even as division on the past — and the required evaluation itself priced.* |
@@ -502,7 +528,7 @@ In GitHub Actions, use the packaged action — nothing to install:
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: Davmunrey/Trazum@9aecd3e92a078b9070ac760116bb119d7205ba5f  # 2.1.0
+- uses: Davmunrey/Trazum@082d28bdf98ea06d6d3aa2a6a6cbfb4fd8620122  # 2.4.0
   with:
     target: prompts/system.txt
     max-tokens: 2000
@@ -548,7 +574,7 @@ permissions:
 
 steps:
   - uses: actions/checkout@v7
-  - uses: Davmunrey/Trazum@9aecd3e92a078b9070ac760116bb119d7205ba5f  # 2.1.0
+  - uses: Davmunrey/Trazum@082d28bdf98ea06d6d3aa2a6a6cbfb4fd8620122  # 2.4.0
     with:
       target: prompts/            # a directory uses trazum.config.json budgets
       comment: true
@@ -577,7 +603,7 @@ run gates tokens before the money is spent or the spend itself, and saying
 which is the caller's job:
 
 ```yaml
-- uses: Davmunrey/Trazum@9aecd3e92a078b9070ac760116bb119d7205ba5f  # 2.1.0
+- uses: Davmunrey/Trazum@082d28bdf98ea06d6d3aa2a6a6cbfb4fd8620122  # 2.4.0
   with:
     usage-log: logs/yesterday.jsonl
     max-usd: '50'            # exit 1 over budget — no period assumed
@@ -615,7 +641,7 @@ in **[the command reference](docs/commands.md)**: the
 measured multiplication (`--from-log`), the cache reorder, the CI baseline,
 the fleet, the plan and its verification, the provider pull, the gateway,
 the evaluations that spend money and say so first, and everything else the
-[table above](#the-46-commands) links to.
+[table above](#the-51-commands) links to.
 
 `trazum --version` prints the version on its own, and works when your config is
 broken — which is exactly when somebody is asking.
@@ -1148,6 +1174,9 @@ apps/web/          Next.js (App Router) — Optimise, Compare, Your bill, Librar
 action/            the packaged GitHub Action that comments on pull requests
 scripts/           release notes, the token-band harness, rollback recovery
   draw-architecture.mjs  redraws the picture above from the workspace globs
+  build-wiki.mjs     rebuilds wiki/ from this file, verbatim, section by section
+wiki/              the GitHub wiki, generated — every page is a section of a
+                   document above, so there is nothing here to keep in sync
 ```
 
 ## Updating prices

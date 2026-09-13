@@ -1,6 +1,6 @@
 {
   "name": "@trazum/tokenizer-openai",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "description": "OpenAI's own tokenizer as an optional counter for Trazum: exact counts for the models it knows, and a refusal for every model it does not.",
   "license": "MIT",
   "author": "David Mu\u00f1oz Rey",
@@ -49,7 +49,7 @@
     "js-tiktoken": "^1.0.21"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "typescript": "^7.0.2"
   },
   "engines": {

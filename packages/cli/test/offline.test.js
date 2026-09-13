@@ -206,6 +206,128 @@ function workspace() {
     ]),
   );
   write(
+    'anthropic-cost.json',
+    JSON.stringify({
+      data: [
+        {
+          starting_at: day(7, 1),
+          ending_at: day(7, 2),
+          results: [
+            {
+              amount: '400.00',
+              currency: 'USD',
+              cost_type: 'tokens',
+              service_tier: 'standard',
+              model: 'claude-opus-5',
+              token_type: 'uncached_input_tokens',
+              description: 'Claude Opus 5 Usage - Input Tokens',
+              workspace_id: null,
+            },
+          ],
+        },
+      ],
+      has_more: false,
+      next_page: null,
+    }),
+  );
+  write(
+    'a-receipt.json',
+    JSON.stringify({
+      schemaVersion: 1,
+      emittedAt: null,
+      span: { fromMs: Date.parse(day(7, 1)) + 3_600_000, toMs: Date.parse(day(7, 1)) + 7_200_000, calls: 1 },
+      counting: 'counted',
+      lines: [],
+      total: { calls: 1, usd: 3.5 },
+      gaps: [],
+    }),
+  );
+  write(
+    'openai-usage.json',
+    JSON.stringify({
+      object: 'page',
+      data: [
+        {
+          object: 'bucket',
+          start_time: Math.floor(Date.parse(day(7, 1)) / 1000),
+          end_time: Math.floor(Date.parse(day(7, 2)) / 1000),
+          results: [
+            {
+              object: 'organization.usage.completions.result',
+              input_tokens: 9000,
+              input_cached_tokens: 0,
+              input_cache_write_tokens: 0,
+              input_uncached_tokens: 9000,
+              output_tokens: 400,
+              input_text_tokens: 9000,
+              output_text_tokens: 400,
+              input_cached_text_tokens: 0,
+              input_audio_tokens: 0,
+              input_cached_audio_tokens: 0,
+              output_audio_tokens: 0,
+              input_image_tokens: 0,
+              input_cached_image_tokens: 0,
+              output_image_tokens: 0,
+              num_model_requests: 3,
+              project_id: null,
+              user_id: null,
+              api_key_id: null,
+              model: 'gpt-4o-mini-2024-07-18',
+              batch: false,
+              service_tier: 'default',
+            },
+          ],
+        },
+      ],
+      has_more: false,
+      next_page: null,
+    }),
+  );
+  write(
+    'openrouter-activity.json',
+    JSON.stringify({
+      data: [
+        {
+          byok_usage_inference: 0,
+          completion_tokens: 400,
+          date: day(7, 1).slice(0, 10),
+          endpoint_id: '550e8400-e29b-41d4-a716-446655440000',
+          model: 'openai/gpt-4.1',
+          model_permaslug: 'openai/gpt-4.1-2025-04-14',
+          prompt_tokens: 9000,
+          provider_name: 'OpenAI',
+          reasoning_tokens: 0,
+          requests: 3,
+          usage: 0.0212,
+        },
+      ],
+    }),
+  );
+  write(
+    'anthropic-usage.json',
+    JSON.stringify({
+      data: [
+        {
+          starting_at: day(7, 1),
+          ending_at: day(7, 2),
+          results: [
+            {
+              model: 'claude-opus-5',
+              service_tier: 'standard',
+              uncached_input_tokens: 9000,
+              cache_read_input_tokens: 0,
+              cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 0 },
+              output_tokens: 400,
+              server_tool_use: { web_search_requests: 0 },
+            },
+          ],
+        },
+      ],
+      has_more: false,
+      next_page: null,
+    }),
+  );
+  write(
     'helicone.json',
     JSON.stringify([
       {
@@ -312,6 +434,11 @@ const INVOCATION = {
   'from-claude-code': ['transcript.jsonl', '-o', 'c1.jsonl'],
   'from-otel': ['spans.json', '-o', 'c2.jsonl'],
   'from-litellm': ['litellm.json', '-o', 'c3.jsonl'],
+  'from-anthropic': ['anthropic-usage.json', '--label', 'billing', '-o', 'c6.jsonl'],
+  'from-openai': ['openai-usage.json', '--label', 'billing', '-o', 'c7.jsonl'],
+  'from-openrouter': ['openrouter-activity.json', '--label', 'billing', '-o', 'c8.jsonl'],
+  bill: ['openrouter-activity.json', '-o', 'b1.json'],
+  reconcile: ['a-receipt.json', '--against', 'anthropic-cost.json', '-o', 'r1.json'],
   'from-helicone': ['helicone.json', '-o', 'c4.jsonl'],
   'from-langsmith': ['langsmith.json', '-o', 'c5.jsonl'],
   switch: ['usage.jsonl', '--to', 'claude-haiku-4-5'],

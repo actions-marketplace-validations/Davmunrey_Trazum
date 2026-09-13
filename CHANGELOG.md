@@ -11,7 +11,575 @@ merged commit with no entry is a change only `git log` remembers.
 
 ## Unreleased
 
-Nothing yet.
+### Changed
+
+- **`bill` says which flag prices an OpenRouter slug.** When the receipt's
+  unpriced gap holds a model id with a slash in it, which is how OpenRouter
+  names models and which the bundled catalogue does not carry, the run ends
+  by naming `--pricing-live`. Derived from what was refused rather than from
+  which shape the file was, and silent when the flag is already on or nothing
+  unpriced is a slug.
+
+- **The README and the landing page open with the one line that works with
+  nothing installed.** `npx @trazum/cli bill ~/.claude/projects` is the first
+  section after the badges and sits under the landing hero in all five
+  locales, before either button. Plan 2.4's first move said this line was the
+  landing-page demo, and until now it was the fourth thing on the page.
+
+### Fixed
+
+- **The packaged Action pin in `README.md` and `docs/running.md` advanced to
+  2.4.0's release commit**, the one `v2.4.0` points at, which is the retry's
+  merge rather than the release pull request's. It moves in the pull request
+  after the release, as `docs/releasing.md` says it must: `security.test.js`
+  asks git which commit the tag names and refuses any other commit that
+  merely declares the version.
+
+- **The release job checks out the whole history, as CI does.** 2.4.0's first
+  release run failed in `verify` and published nothing: `changelog-coverage.test.js`
+  measures "not yet released" against the newest reachable tag and refuses to
+  guess when a clone has none, and the release job's checkout was shallow
+  where CI's is `fetch-depth: 0`. The guard was added after 2.3.0 and this was
+  its first release, so the mismatch had never been exercised. The publish is
+  retried by this merge: the manifests still name a version the registry
+  lacks, which is what the `decide` job looks for.
+
+## 2.4.0 — One door, and where the spend is
+
+The first release since 2.0.0 that adds commands, and the plan that asked
+for them starts from a number rather than a feature: about two hundred
+downloads a month behind forty-nine commands. `docs/plan-2.4.md` names three
+causes and a move for each, and every move is in this release or named below
+as blocked on something this repository does not hold.
+
+### Changed
+
+- **`changelog-coverage.test.js` tells a release in preparation apart from an
+  empty section.** The guard was written after 2.3.0 and had never met a
+  release: the pull request that cuts one folds `Unreleased` into the new
+  version's heading, so the section is empty while commits sit above the tag,
+  which is exactly the state it fails on. It now skips when the manifests
+  name a version the tags do not have *and* the changelog carries that
+  version's heading, the two facts together, because either alone is the
+  collision it exists for.
+
+- **The xAI and Moonshot price rows were reviewed and found orphaned.**
+  `docs.x.ai/docs/models` and `platform.kimi.ai/docs/pricing/chat` were read
+  on 2026-09-12 and neither lists the one id this table carries for it,
+  `grok-4` and `kimi-k2`. Both rows keep their price, because calls in
+  somebody's log really happened at it, and neither is marked retired,
+  because that is recorded from the provider's own refusal to a request and
+  needs a key this repository does not hold. Neither provider's newer models
+  are added: xAI prices every model at two rates split at 200k prompt
+  tokens, which this table has no way to express, and Kimi's page states no
+  context window, which this table would have to invent. Each row says so in
+  its `notes`, and `trazum models` prints them.
+
+**Five merges landed on `main` with no entry here, and this section is where
+they should have been.** The rule three paragraphs above — *a change that
+alters nothing installable still lands there rather than nowhere* — was stated
+and unenforced, so four consecutive pull requests after 2.3.0 left `Unreleased`
+empty and nothing failed. `changelog-coverage.test.js` now fails when there are
+commits after the newest tag and nothing written under this heading. Backfilled
+below rather than started clean, because a record that begins at the moment
+somebody noticed is the kind of tidy history this file exists to refuse.
+
+### Added
+
+- **`scripts/adoption.mjs`: the adoption figures, read at release time.**
+  Plan 2.4's fifth move. Three public counters — npm downloads of
+  `@trazum/cli` over the last thirty days, GitHub stars, the MCP registry's
+  latest version — asked once and printed as the one line `docs/releasing.md`
+  now asks for under every new heading in `RELEASES.md`, so the next plan
+  starts from a figure the way this one did. A counter that could not be read
+  is printed as unavailable and never as zero: a zero says the product has no
+  users, which is a claim, and an unavailable is a fact about the run.
+  `packages/core/test/adoption.test.js` holds that property without a network.
+
+- **The week's bill, every Monday: a recipe in `docs/running.md`.** Plan 2.4's
+  fourth move, cut down to what was actually missing once the existing loop
+  (`connect`, `watch --once`, `pulse`, and the four scheduler recipes) was
+  read rather than assumed absent: the packaged spend gate on a cron, with
+  `since` computed by the job so a budget with no period assumed is a weekly
+  one, and the report in the run summary because the Action's comment needs a
+  pull request and a cron has none. The plan's section 4 is rewritten to say
+  so.
+
+- **The README tells every MCP client how to install, not only Claude Code.**
+  It said two lines for Claude Code and "over stdio does the same" for
+  everyone else. It now carries the `mcpServers` JSON that Cursor, Windsurf
+  and Claude Desktop all read, the registry listing it is published under,
+  and the `npx @trazum/cli bill` line that works with nothing installed.
+  `docs/plan-2.4.md` section 3 is rewritten from what was checked: the MCP
+  registry already serves 2.3.0 as latest and `release.yml` has updated the
+  listing on every release since 1.80.2, so that row needed nothing; the
+  Marketplace listing and the Hugging Face Space are named as unchecked and
+  blocked respectively rather than assumed.
+
+- **`docs/plan-2.4.md`: one door, and where the spend is.** The first plan
+  here that starts from a number rather than a feature: about two hundred
+  downloads a month behind forty-nine commands. Three causes and a fix for
+  each — one command that reads anything, converters for where AI money is
+  actually spent, and presence on the surfaces that find tools — with the
+  ones that could not be built from a schema read in this environment
+  (Cursor, Hugging Face) named as blocked rather than written from memory.
+
+- **`trazum bill`, the 51st command: one door.** The plan's first move.
+  Reads a file or a directory, tells each file's shape from its own text with
+  the sniffers the converters already shipped, converts it with the same
+  converter the dedicated command uses, prices it, and ends on the receipt
+  `receipt` writes. Every refusal a converter makes is made here; what
+  differs is the telling — one line per file with its shape, its records and
+  how many rows were left out, and the dedicated command named as the place
+  that says why. Three refusals of its own: a file no shape claims is named
+  and not guessed; a file two shapes claim is named as ambiguous and left
+  alone; a provider's cost report is named as a bill rather than usage and
+  pointed at `reconcile`. `packages/cli/test/bill.test.js` runs it over a
+  directory holding one of each. `npx @trazum/cli bill ~/.claude/projects`
+  is now the first thing that works with nothing configured.
+
+- **`trazum from-openrouter`, the 50th command, the plan's second move.** OpenRouter's activity report (`GET /api/v1/activity`, management
+  key, the last thirty days) read as a usage log, from the published schema
+  with the endpoint's own example as the fixture. It meets the half Trazum
+  already had: `--pricing-live` prices hundreds of models from OpenRouter's
+  catalogue, keyed by slug, and this report carries the same slugs. What
+  OpenRouter charged (`usage`, and `byok_usage_inference` for upstream
+  charges on the operator's own keys) is summed over every row, refused or
+  not, and printed **beside** Trazum's figure, never merged — the LiteLLM
+  `spend` rule. Reasoning tokens are counted and deliberately not added,
+  because the schema does not say whether `completion_tokens` already holds
+  them and adding them if it does would charge reasoning twice.
+  `--label-by-workspace` mirrors the other mappings, exact match, no `null`
+  case. `packages/core/test/openrouter-activity.test.js` (14 tests).
+
+- **`trazum from-openai`, the 49th command: the other provider's usage report,
+  read as a log.** The same door as `from-anthropic` and the same arrangement:
+  the operator's `curl`, the operator's admin key, and a command that reads
+  only what came back, so Trazum still holds no provider credential. Every
+  field is from the published OpenAPI schema of
+  `GET /v1/organization/usage/completions`, and the schema's own example is
+  the fixture, because its numbers are an identity the converter leans on
+  (`input_tokens` = uncached + cached + cache-write, each the sum of its text,
+  audio and image parts). Three things it does that the Anthropic one does
+  not need to. The record is written in the **Chat Completions shape** —
+  `prompt_tokens` with the cached half inside it — because that is how this
+  report counts, and a record in the Anthropic shape would charge the cached
+  half twice; a test parses a converted record back to prove the split.
+  **Audio and image tokens are never priced at a text rate**: a row carrying
+  any is reduced to its text part through the schema's own split and the rest
+  is a named gap, with cache-write tokens on such a row left out too because
+  the schema gives them no modality. And since the schema does not enumerate
+  service tiers, any tier but `default` is left out and **named** rather than
+  counted. `batch: true` rows are refused like Anthropic's batch tier;
+  `--label-by-project` mirrors `--label-by-workspace`, exact match, with no
+  `null` case because every OpenAI request belongs to a project with an id.
+  `reconcile` now reads **OpenAI's cost report** too, told apart by shape:
+  its `amount.value` is dollars where Anthropic's is cents, so nothing is
+  divided, and its `quantity_unit` separates what no token rate covers while
+  the report's silence on batch is said out loud rather than papered over.
+  `packages/core/test/openai-usage.test.js` (18 tests) and
+  `openai-cost.test.js` (14 tests); the core's `reconcile` now takes a
+  provider-neutral `BilledReading`.
+
+- **`trazum from-anthropic`, the 47th command, and the surface was frozen at
+  46.** `plan-1.83-2.0.md` says so and stays as written: the freeze was real
+  and this is the decision to leave it, recorded rather than slipped in. What
+  earned it is the one question no converter here could answer. Every other
+  one reads a log or a proxy, and a log only knows the machines it was written
+  on — the console, the other team, the laptop nobody instrumented are all
+  spend that never reaches one. `GET /v1/organizations/usage_report/messages`
+  knows about all of it.
+
+  **It takes the answer, never the key.** That endpoint needs an admin
+  credential, which also manages the organisation's members and keys, and
+  holding one is the thing this project's whole design exists not to do. The
+  operator runs the `curl` in their own shell and this reads what came back,
+  so the converter stays a pure function of text and is tested without a
+  network.
+
+  **It refuses three things rather than guessing them.** A row with no model,
+  because nothing on it says what answered. A row at any tier but standard,
+  because batch is billed at a discount and a catalogue rate would overstate
+  it by half while looking entirely right — this product's own definition of
+  the unforgivable failure. And web search requests, billed per request, which
+  no token rate reaches. Each is counted and named, and `has_more` says out
+  loud that a bill built from one page is short.
+
+  The identities on every row — the account, the service account, the API key,
+  the workspace — are read by nothing: a fixture plants a marker in each and
+  greps the output. A workspace id is not a project name, so `--label` is
+  still where the project comes from.
+
+- **`trazum reconcile`, the 48th command: what you computed beside what you
+  were billed.** The payoff of `from-anthropic`, and the one figure no other
+  tool gives. Every door here answers *what did this usage cost at these
+  rates*; the provider answers *what did we charge you*. The gap is the
+  interesting part and there was nowhere to look at it.
+
+  **The two are never added.** `docs/commands.md` already stated the rule for
+  LiteLLM's `total_cost` — a provider-billed figure sits beside Trazum's and
+  is never merged into it, because two price tables summed into one number is
+  how a report becomes quietly wrong. This is that rule with arithmetic
+  attached: nothing corrects one figure with the other, and nothing decides
+  which is right.
+
+  **The difference comes apart, when the report can take it apart.** With
+  `group_by[]=description` the cost report says whether a row was tokens, a
+  web search, a code execution or a session, and whether it was batch-tier.
+  So the difference splits into what no token rate covers, what was billed at
+  a discount `from-anthropic` refuses to misprice, and a **remainder** — the
+  same standard-tier tokens priced two ways, or usage the log never saw. The
+  remainder is never folded into the other two, and a negative one is reported
+  as it is: Trazum priced more than the provider charged, which is a stale
+  rate in the direction that costs somebody money. Without that grouping the
+  run says the difference cannot be attributed rather than naming a remainder
+  that is really the whole difference.
+
+  **The unit is the trap.** `amount` is a decimal string in the currency's
+  lowest unit: `"123.45"` in USD is $1.2345. Read as dollars it overstates a
+  bill a hundredfold and looks plausible doing it. Divided once, at the end,
+  with a test asserting the factor against the schema's own example.
+
+  **Three refusals rather than three plausible numbers.** Windows that do not
+  line up (a receipt for one day against a bill for others is a wrong number
+  under a right title), a currency with no rate to convert it by, and an
+  `amount` that is not a number — counted, never read as zero, because a zero
+  quietly shrinks a bill.
+
+- **`--label-by-workspace <rules.json>` on `from-anthropic`.** The gap the
+  command shipped with, named in its own doc comment and closed here: the
+  provider knows workspaces and does not know what you call your projects, so
+  the mapping is one the operator writes. The same shape `--label-by-cwd`
+  established, matched **exactly** rather than by prefix — paths nest and
+  opaque identifiers do not.
+
+  **The `null` that means two things.** The report's schema uses `null` for
+  `workspace_id` both when the caller did not group by workspace and for the
+  default workspace. Nothing on the row separates them, so it is derived from
+  the report: if any other row carries an id, grouping was on and a `null` is
+  the default workspace; if none does, `null` rules do not apply and the run
+  says the split asked for was not made. Guessing either way would put the
+  default workspace's money on a label nobody chose.
+
+- **`scripts/build-wiki.mjs` matches the commands heading by pattern.** It
+  held `## The 46 commands` as a literal, which is a second copy of a count
+  the product decides, and it went stale the first time a command was added.
+
+- **`--label-by-cwd <rules.json>` on `from-claude-code`, and `labelForCwd` in
+  `@trazum/core`.** `--label-from-project` labels by the transcript's own
+  folder, which says nothing when one folder held two projects — somebody who
+  moved between repositories without starting a new session has one transcript
+  and no field in it saying which work was which. This repository's own bill was
+  the example. The transcript carries a `cwd` per line, so the rules file maps a
+  path prefix to a label the operator wrote, longest prefix wins, and a
+  directory no rule covers is left unattributed rather than guessed. A
+  malformed rule is refused by number rather than skipped, since a rule that
+  quietly labelled nothing is the silent version of the guessed label.
+- **`scripts/build-wiki.mjs` and the `wiki/` pages it generates.** GitHub
+  indexes a wiki separately from code, so somebody searching for "cache TTL"
+  reaches a page rather than line 812 of a 1,200-line README. No page is
+  written by hand: each one is a section of `README.md` copied verbatim, with
+  relative links rewritten to absolute blob URLs and images to raw ones,
+  because a wiki is served from `/wiki/` and a repository-relative path is
+  broken there. `wiki.test.js` runs the script with `--check`. The script never
+  pushes — a wiki is a second git repository with its own credentials.
+- **`scripts/prepare-commit-msg`.** Adds the `Signed-off-by` trailer from the
+  identity git is already recording as the author, after a missing one stranded
+  a branch mid-review. `signoff-hook.test.js` reads the required regex out of
+  the workflow rather than restating it, and runs the hook against a throwaway
+  repository so the test reads the hook and not the machine it runs on.
+
+### Security
+
+- **`next` 16.3.2 to 16.3.3**, which closes two *critical* unauthenticated
+  remote code execution advisories: one on Windows-hosted servers
+  (GHSA-p293-qw3h-jr36) and one in the Image Optimization API when AVIF files
+  are used (GHSA-2xp9-vwfh-vxw4). Only the second reaches `apps/web`, which is
+  deployed on Linux and serves `/opengraph-image` and `/icon.svg` through Next.
+  Dependabot grouped it under `routine` and its title says nothing about any of
+  this, which is the reason this entry exists: a security fix that arrives
+  looking like a version bump is one that waits behind the other version bumps.
+  Carried in with the rest of that group — `@types/node` 26.4.0, `lucide-react`
+  1.35.0, `posthog-js` 1.422.5, `@types/react-dom` 19.2.5 — because splitting
+  a resolved lockfile to isolate one entry is a worse risk than the four
+  routine bumps beside it.
+
+### Fixed
+
+- **Two test suites were measuring the calendar.** Both went red at midnight on
+  the 1st of a month, on a dependency bump that touched neither, after being
+  green all month; nothing was wrong with the product. `serve.test.js` compared
+  a window against a literal August instant while its fixture moved with the
+  calendar — in a file already carrying a helper written to prevent exactly
+  that, which is worse than carrying no helper, because the file then reads as a
+  problem already dealt with. `position-tool.test.js` pinned eight days in
+  August and asserted forty dollars on the month scope. Both fixtures are now
+  relative to the month the suite runs in.
+- **The agent skill described the `labels` config block as mapping a raw label
+  to a workload name.** It does not: it maps a usage-log label to the prompt
+  file that label sends, and the schema validates every value as a file path. An
+  agent following the old sentence sent somebody to write a mapping that fails
+  to load. The row now says what the block is for, and the prose says what to do
+  instead — choose the label at the source with `--label`, one transcript at a
+  time.
+- **The packaged Action pin in `README.md` advanced to 2.3.0's own release
+  commit**, from a 2.2.0 commit, in all three places it appears.
+- **Both CodeQL entry points advanced to v4.37.9 in one commit.** Dependabot
+  raised `init` and `analyze` as two pull requests, and the workflow's own
+  comment says neither may be merged alone: `analyze` refuses a configuration
+  file `init` did not write, so a mismatched pair turns the security job red
+  with an error naming a version nobody chose. `security.test.js` already held
+  that rule and either pull request would have failed it, which is the guard
+  working rather than an obstacle to route around.
+
+### Added
+
+- **`scripts/assert-commit-identity.sh`, run by the web session hook.** The
+  platform re-asserts its own bot identity in *global* git config on every
+  session start, so the first commit after any re-clone was authored "Claude"
+  with no `Signed-off-by` — refused by the owner's own rule and then by the
+  required DCO check. Twice in one day, fixed by hand both times. The script
+  derives the identity instead of hardcoding one: the email is the account
+  that opened the session (so a contributor's fork session asserts the
+  contributor, never this repository's owner), and the name is whatever that
+  email already calls itself here — as an author, or in a `Signed-off-by`
+  trailer, which is often all a squash-merge main preserves. Written
+  repo-locally, the one scope the platform's re-assertion does not touch, and
+  it installs the sign-off hook while it is there. A session with no human
+  account changes nothing: the bot identity is then the true one.
+  `commit-identity.test.js` holds all of it — and its own first guard was
+  satisfied by the hook's *comment* mentioning the script after the call was
+  deleted, found by planting exactly that deletion; it matches the invocation
+  now.
+
+### Changed
+
+- **`changelog-coverage.test.js`.** Fails when commits exist after the newest
+  tag and this section is empty. Derived from `git describe` and this file
+  rather than from a list of pull requests somebody keeps in step, for the
+  reason every other guard here is: a list nothing binds to what it describes
+  is the defect this repository keeps finding in itself.
+- **`calendar-fixtures.test.js`.** Fails any test file that both builds an
+  instant from the clock and asserts an absolute one, since those are two
+  claims about the same clock that cannot both stay true. It strips comments
+  first, or the bug report reads as the bug, and it exempts one file — its own,
+  by resolving its own path rather than by an entry in a list — because it has
+  to hold the planted violation that proves it fires.
+
+## 2.3.0 — The warning that cried wolf, and a skill written for one agent
+
+### Added
+
+- **`reviewedForModels(models, catalogue)` in `@trazum/core`.** The review date
+  behind one report rather than behind the whole table: the oldest provider
+  among the models actually priced, falling back to the catalogue's own date in
+  the three cases where that cannot be established — an overlay in effect, a
+  model the catalogue does not carry or carrying no provider, and a provider
+  with no recorded date. The fallback is inside the function rather than at
+  each call site, for the reason `isOffered` records: the fifth call site is
+  always the one written with only the first half of a two-part rule.
+- **`pricing.reportReviewed` and `pricing.reportAgeDays` in `profile --json`.**
+  The provenance of *these figures*, beside `lastReviewed` and `ageDays`, which
+  go on meaning the table's own oldest provider. New keys are additions the
+  contract allows; a key cannot change meaning under a minor, so neither did.
+- **`## Through MCP` and `## Before you spend, whichever door you have` in the
+  agent skill.** The seven tools, the client-agnostic stdio wiring, and the one
+  rule that decides whether any of it works — the server never opens a file,
+  every tool takes the text.
+- **The availability check can ask xAI and Moonshot.** `PROBES` in
+  `scripts/check-model-availability.mjs` covered five of the catalogue's seven
+  providers; `grok-4` and `kimi-k2` were the two ids nothing in this repository
+  could ask about, and the record said so in every run rather than leaving them
+  out. Both probes are written now, so the moment a key exists the question is
+  one command.
+
+### Fixed
+
+- **The stale-price warning named a date belonging to models the report never
+  used.** `PRICING_LAST_REVIEWED` is the oldest provider's, which answers *how
+  old is this table* and not *how old are the prices in front of me* — and the
+  CLI profile, the MCP report and the browser bill all decided staleness from
+  it. The sentence they print says, in these words, that the table behind
+  **every dollar here** was reviewed on that date.
+
+  On 2026-08-31 that was false on a report of Claude and OpenAI calls: it named
+  2026-06-24, the date belonging to `grok-4` and `kimi-k2`, whose providers no
+  longer list them so neither price can be re-read and neither date can
+  honestly move. The prices actually used had been read four days and zero days
+  earlier.
+
+  Two costs, and the second is worse. The figure was wrong, and a warning that
+  fires on every run is one people stop reading — so the day the table really
+  is stale, nothing has been said that was not said yesterday. `trazum models`
+  had already worked this out and prints its dates per provider; the fix
+  reached one surface and not the three that qualify a figure.
+
+- **Three converters were documented as unbuilt for a whole arc after they
+  shipped.** The agent skill described `from-litellm`, `from-helicone` and
+  `from-langsmith` as "named as next but not built", so an agent asked about a
+  LiteLLM export offered to write a converter that had been there for releases.
+  All five now sit in one table, with `from-otel` named as the one to offer
+  when you do not know what somebody runs.
+
+- **A refusal about the *credential* was being recorded as a refusal of the
+  *model*, and it nearly retired a live one.**
+
+  xAI answers `400 "Incorrect API key provided"` to a bad key — not 401 — and
+  the first version of the probe above duly classified `grok-4` as gone, with
+  the provider "quoting" a sentence about the key. It was caught by running it
+  with a credential that turned out to be a key **id** rather than a key: the
+  script printed `GONE grok-4 400`, which is a confident wrong answer of
+  exactly the shape this file exists to prevent.
+
+  What it would have cost is worth stating, because "a script mislabelled a
+  row" understates it: `pricing.ts` copies that sentence verbatim into
+  `retired.because`, `retired` is a stronger statement than `recommendable:
+  false` and is honoured everywhere that one is, and the reports quote it. A
+  typo in an environment variable would have retired a working model, in the
+  provider's own words, on the record, and every surface downstream would have
+  repeated it.
+
+  The status alone cannot decide it, so what decides it is **what the provider
+  said**: an answer naming the key is about the key, whatever number it arrives
+  with. Those are now recorded as unasked, which is where an unasked question
+  belongs — the same rule the rate-limit branch already followed. The match is
+  deliberately broad: a false "could not ask" costs a re-run once somebody
+  fixes the key, and a false "gone" costs a retired model that still works.
+
+  Held at the **record** rather than at the classifier, by
+  `model-availability.test.js`: no refused entry may quote a credential error,
+  and no `retired.because` may either. A probe for a provider nobody has
+  thought of yet inherits the guard; a unit test on one function would not have
+  given that. Proved by planting the exact 400 this was found from and watching
+  three assertions fail by name.
+
+- **The README's Action pin was two releases stale, and CI said so before a
+  reader could.** It sat at 2.1.0 while 2.2.0 and 2.2.1 shipped;
+  `docs/releasing.md` allows exactly one release of lag, because the pin can
+  only advance to a release commit once that commit exists. It now points at
+  2.2.0.
+
+  Worth recording how it was caught, because the guard is younger than the
+  habit it protects: this failed **only in CI**, and passed locally, because a
+  fresh checkout has every tag and a working copy has whatever it last
+  fetched. The check derives the allowed lag from `git tag` rather than from
+  anybody remembering, so a stale tag list is a quieter guard rather than a
+  louder one — and reproducing it locally meant fetching tags first, which is
+  now the first thing to try when a `security.test.js` failure will not
+  reproduce.
+
+- `api.x.ai` and `api.moonshot.ai` are declared in `trusted-hosts.test.js`
+  under a kind of their own — *availability check, not a customer path* —
+  rather than as gateway upstreams. The gateway fronts calls a customer makes,
+  and nothing routes customer traffic to either; naming the distinction is what
+  keeps it true by inspection. That guard is what caught them, which is the
+  second time this release it has been the thing that noticed.
+
+### Changed
+
+- **The agent skill is written for any agent, not for one.** Every command is
+  spelled `trazum <command>`, and one table says how to spell that for
+  whichever door the reader has: a shell in this checkout, a shell anywhere
+  else, MCP tools and no shell, a library import, or a browser. It used to open
+  on `npm install` and repeat `node packages/cli/dist/index.js` fifteen times,
+  which is a document about a shell handed to readers who do not have one.
+
+  The derivation to the plugin copy is one table row instead of fifteen paths
+  as a result, and `scripts/build-plugin-skill.mjs` says so.
+
+### Guards
+
+- **Three over the skill, all derived**, because its tables are hand-written
+  and that is the shape of every defect this repository has found in itself.
+  Every command the skill tells an agent to run is one `COMMAND_FLAGS`
+  dispatches; the tool table under `## Through MCP` equals the set the MCP
+  server registers, in both directions, because a tool the skill omits is one
+  an agent with no shell will never call; and every `from-` converter that
+  exists is mentioned somewhere, which is the false claim above pinned from the
+  other side. All three plants fire.
+
+  The tool check began by scanning the file for snake_case and needed an
+  exclusion list to stop flagging `ANTHROPIC_API_KEY` and
+  `pull_request_target` — two lines after a comment about how this repository
+  keeps paying for exclusion lists. It reads the table now, bounded with
+  `sectionOf()` rather than by naming the heading that follows, which
+  `publish.test.js` fails a test for doing and which this test did until it ran.
+
+- **`reviewedForModels` is held from four directions** in `pricing.test.js`,
+  including the property that makes its fallback safe to rely on: whatever it
+  returns is never older than the catalogue-wide date, for every model in the
+  catalogue.
+
+- **`stale-pricing.test.js` was asserting the defect.** It derived staleness
+  from `PRICING_LAST_REVIEWED` while its fixture priced one Anthropic model. It
+  derives it from the fixture's own model now, and gains the case that pins the
+  distinction — a clean log and one carrying `grok-4` — skipped rather than
+  faked on a day the two dates agree.
+
+### Prices
+
+- **Nothing moved, and two dates could not.** OpenAI was read on 2026-08-31 and
+  Anthropic, Google, DeepSeek and Mistral within four days of it, all inside
+  `STALE_PRICING_DAYS`. `xai` and `moonshot` stay at 2026-06-24: `grok-4` is
+  absent from the model list xAI's own docs serve, and `kimi-k2` from the
+  `llms.txt` Moonshot publishes, so there is no price to re-read and moving the
+  date would say a check happened that did not. Neither is marked `retired` —
+  that needs the provider refusing a real request in its own words, and an
+  absence from a page has refused nothing.
+
+
+## 2.2.1 — 2026-08-31
+
+### Changed
+
+- **OpenAI's prices re-read, 68 days after the last check.** `PROVIDER_REVIEWED.openai`
+  moves from 2026-06-24 to 2026-08-31. **No figure moved**: `gpt-5` is still
+  $1.25 in and $10 out per million tokens, `gpt-5-mini` $0.25 and $2, `gpt-5-nano`
+  $0.05 and $0.4. The date moves because the table was read, which is the only
+  thing that ever moves a date here.
+
+  Two things worth writing down for whoever reads next.
+
+  **The address changed.** `platform.openai.com/docs/pricing` now 301s to
+  `developers.openai.com/api/docs/pricing`. Every note in this repository cited
+  the old one, and a reviewer who stops at the redirect reads nothing and moves
+  a date anyway. The comment beside the constant names the new address.
+
+  **The page publishes four tables for the same model** — standard, batch, flex
+  and priority. Reading the wrong one halves or doubles every figure in the
+  catalogue. The standard table is identified here by the other three being its
+  multiples (0.5x, 0.5x, 2x), rather than by trusting the order they appear in:
+  an order is a layout decision somebody can change on a Tuesday, and an
+  arithmetic relationship is not.
+
+### Not changed, and named rather than quietly skipped
+
+- **`moonshot` and `xai` stay at 2026-06-24, because the models this catalogue
+  prices are no longer on either provider's pricing pages.**
+
+  Both pages are readable now — that blockage is gone. What replaced it is
+  worse and more interesting: `grok-4` is absent from xAI's published model
+  table, which lists grok-4.3, grok-4.5, grok-4.6, grok-4.20 and grok-build.
+  `kimi-k2` is absent from Moonshot's, which lists kimi-k3, kimi-k2.7-code,
+  kimi-k2.6, kimi-k2.5 and the Moonshot V1 series.
+
+  So the $3/$15 this catalogue carries for `grok-4`, and the $0.6/$2.5 it
+  carries for `kimi-k2`, cannot be checked against anything. **A date that
+  moved on that would be a date certifying a reading that did not happen**,
+  which is the one thing this file must never say.
+
+  They are **not** marked `retired` either, and that restraint is the point.
+  `types.ts` says `retired` is set when *the provider refused a real request
+  for this id*, recorded by `scripts/check-model-availability.mjs`, with the
+  provider's own sentence quoted rather than paraphrased. Absence from a
+  webpage is not a refusal. Writing one down without having received it would
+  be inventing the provider's words to close a ticket — the same failure as
+  inventing a price, wearing a different hat.
+
+  Finishing this needs an API key for each provider, so the availability check
+  can ask and be told no. Until then both dates stay where they are and
+  `PRICING_LAST_REVIEWED` goes on reading 2026-06-24, which is the whole reason
+  it is derived from the oldest provider rather than written by hand.
 
 ## 2.2.0 — 2026-08-30
 

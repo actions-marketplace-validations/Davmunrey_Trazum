@@ -7,7 +7,7 @@ is what you read when somebody says "what's new" and you have forty seconds.
 Same facts, different job. Nothing here is softened: if a release fixed
 something embarrassing, it says what it was.
 
-**All four packages are on npm at 2.2.0**: `@trazum/core`, `@trazum/cli`,
+**All four packages are on npm at 2.4.0**: `@trazum/core`, `@trazum/cli`,
 `@trazum/mcp` and `@trazum/tokenizer-openai` — published by the workflow itself,
 from the merge of the release PR, carrying an OIDC-signed provenance
 attestation. `trazum-vscode` is the fifth workspace and is not among them: an
@@ -51,6 +51,212 @@ cannot be tagged without its notes being written first. That is the point of the
 file being here rather than pasted into a GitHub form at release time.
 
 ---
+
+## 2.4.0 — One door, and where the spend is
+
+**Adoption, read 2026-09-12:** downloads of @trazum/cli in the last 30 days: unavailable (HTTP 403 from the release environment's proxy), GitHub stars: unavailable (HTTP 403 from the release environment's proxy), MCP registry latest 2.3.0. The first line of its kind; the figure this release was planned from, about 200 downloads a month, was read by hand on 2026-09-11.
+
+**This release starts from a number.** About two hundred downloads a month,
+behind forty-nine commands. That ratio is the finding: the product was deep
+and nobody arrived, and a fiftieth command behind the same door would not have
+changed who walked through it. [The plan](docs/plan-2.4.md) names three causes
+and one move for each, and every move is here.
+
+### One door: `trazum bill <anything>`
+
+```bash
+npx @trazum/cli bill ~/.claude/projects
+```
+
+Reads a file or a directory, tells each file's shape **from its own text** with
+the sniffers the converters already shipped, converts it with the same
+converter the dedicated command uses, prices it, and ends on the receipt
+`receipt` writes. Every refusal a converter makes is made here; what differs is
+the telling: one line per file with its shape, its records and how many rows
+were left out, and the dedicated `from-<shape>` command named as the place that
+says why. A file no shape claims is named and not guessed. A file two shapes
+claim is named as ambiguous and left alone. A provider's cost report is named
+as a bill rather than usage and pointed at `reconcile`. It is the first thing
+that works with nothing configured, and it is the first line of the README now.
+
+### Where the spend is: two more providers, read from their published schemas
+
+**`trazum from-openai`** reads `GET /v1/organization/usage/completions`, and
+`reconcile` reads `GET /v1/organization/costs` beside a receipt. Every field
+is from the published OpenAPI schema, and the schema's own example is the
+fixture. Three things this converter does that the Anthropic one did not need
+to: the record is written in the Chat Completions shape, because
+`input_tokens` includes the cached half in this report and a record in the
+Anthropic shape would charge it twice; audio and image tokens are never priced
+at a text rate, and a row carrying any is reduced to its text part through the
+schema's own split with the rest a named gap; and since the schema does not
+enumerate service tiers, any tier but `default` is left out and *named*. The
+cost report's `amount.value` is dollars where Anthropic's is cents, so nothing
+is divided, and the report's silence on batch is said rather than papered over.
+
+**`trazum from-openrouter`** reads `GET /api/v1/activity`, keyed by the same
+slugs `--pricing-live` already prices hundreds of models from, so the two
+halves Trazum had meet. What OpenRouter charged is summed over every row,
+refused or not, and printed beside Trazum's figure, never merged. Reasoning
+tokens are counted and deliberately not added, because the schema does not say
+whether the completion count already holds them.
+
+**Cursor and Hugging Face are named as blocked, not written from memory.**
+Their documentation hosts were unreachable from the environment this plan was
+built in, and a converter written from a search-engine summary mis-reads
+somebody's bill. Cursor waits for the reference or one real export to build
+the fixture from; Hugging Face's gateway is OpenAI-compatible and should
+already parse, which needs one real response to be asserted.
+
+### Where the people are, and a reason to come back
+
+The README told Claude Code users two lines and everyone else that stdio does
+the same. It now carries the `mcpServers` JSON that Cursor, Windsurf and Claude
+Desktop all read. The MCP registry was checked and needed nothing: it serves
+the latest version and the release workflow has updated it since 1.80.2.
+`docs/running.md` gains the one scheduled recipe a repository with logs in it
+was missing, **the week's bill, every Monday**, as the packaged spend gate on a
+cron with the window computed by the job. And `scripts/adoption.mjs` reads
+three public counters at release time and prints the line at the top of this
+section, with an unreadable counter printed as unavailable and never as zero.
+
+### Two price rows found orphaned
+
+The xAI and Moonshot pages were read on 2026-09-12 and neither lists the id
+this table carries for it. `grok-4` and `kimi-k2` keep their price, because
+calls in somebody's log really happened at it, and are not marked retired,
+because that is recorded from a refusal that needs a key this repository does
+not hold. The newer models are not added: xAI prices at two rates split at
+200k prompt tokens, which this table cannot express, and Kimi's page states no
+context window. `trazum models` says so in each row's notes.
+
+### Also in this release
+
+Everything merged since 2.3.0 and recorded in the changelog: `from-anthropic`
+with `--label-by-workspace`, `reconcile` against Anthropic's cost report,
+`--label-by-cwd` on `from-claude-code`, the generated wiki, the sign-off hook,
+the `next` security bump, and the guard that now fails when a merge leaves
+the changelog empty. The CLI goes from 46 commands at 2.0.0 to 51.
+
+---
+
+## 2.3.0 — The warning that cried wolf
+
+**Every profile run was warning that its prices were 68 days old, on prices
+read that week.** The warning says, in these words, that the price table behind
+*every dollar here* was last reviewed on that date. On a report of Claude and
+OpenAI calls it named 2026-06-24 — a date belonging to two models that report
+never touched — while the prices actually used had been read four days and zero
+days earlier.
+
+The date it printed is the **oldest provider's**, which is the right answer to
+*how old is this catalogue* and the wrong answer to *how old are the prices in
+front of me*. Three surfaces used it: the CLI's `profile`, the MCP report and
+the browser's bill.
+
+**The second cost is worse than the wrong figure.** A warning that fires on
+every run is one people stop reading, so on the day the table really is stale,
+nothing has been said that was not said yesterday.
+
+`trazum models` had already worked this out and prints its dates per provider,
+because a reader pricing Claude calls should not be told two months when their
+half was checked that morning. The fix reached one surface and not the three
+that qualify a figure. It has now.
+
+`profile --json` gains `reportReviewed` and `reportAgeDays` beside
+`lastReviewed` and `ageDays`, which go on meaning exactly what they meant: the
+table's own oldest provider. Two questions, two pairs of keys, and nothing a
+consumer branches on changed underneath it.
+
+### The skill is written for any agent now, not for one
+
+Trazum's agent-facing skill opened by telling the reader to run `npm install`
+and then spelled every example as `node packages/cli/dist/index.js`, fifteen
+times. An agent with an MCP client and no shell was handed a document about a
+shell. An agent working in somebody else's repository was handed a path that
+does not exist there.
+
+Every command is spelled `trazum <command>` now, and one table at the top says
+how to spell that for whichever door you have: a shell in a checkout, a shell
+anywhere else, MCP tools and no shell, a library import, or a browser.
+
+**`## Through MCP` is new, and it is the point of the change.** For an agent
+with no shell the MCP server is the whole product, and the skill mentioned it
+nowhere. It now carries the seven tools, the client-agnostic stdio wiring, and
+the one rule that decides whether any of it works: the server never opens a
+file, every tool takes the text, and an agent that passes a path gets nothing
+back that means anything.
+
+**`## Before you spend` is new too**, and it is the moment the skill has always
+claimed to be for — a budget exists, a call is about to be made, nobody knows
+whether it fits. Both doors are named, and so are the three ways to get it
+wrong: `cannot-tell` is not a yes, the ceiling is never invented so a check can
+pass, and what has been spent is measured while what the next call costs is an
+estimate.
+
+**One claim in it was false.** `from-litellm`, `from-helicone` and
+`from-langsmith` were described as *named as next but not built* for the whole
+arc after they shipped, so an agent asked about a LiteLLM export offered to
+write a converter that had been there for releases. All five converters now sit
+in one table, with `from-otel` named as the one to offer when you do not know
+what somebody runs — it is the standards-based door and does not depend on
+which vendor they chose.
+
+Three guards now hold the skill to the code, all derived from it: every command
+it tells an agent to run is one the CLI dispatches, its MCP tool table equals
+the set the server registers in both directions, and every converter that
+exists is mentioned. The false claim above is exactly what the third one
+catches.
+
+### Prices
+
+Nothing moved. OpenAI was read on 2026-08-31 and Anthropic, Google, DeepSeek
+and Mistral within four days of it. `xai` and `moonshot` stay at 2026-06-24:
+`grok-4` is absent from the model list xAI's own docs serve and `kimi-k2` from
+the `llms.txt` Moonshot publishes, so there is no price to re-read, and moving
+the date would say a check happened that did not. Neither is marked retired —
+that needs the provider refusing a real request in its own words, and a page
+that stopped mentioning a model has refused nothing.
+
+## 2.2.1 — One price table read, two that no longer describe our models
+
+**OpenAI's prices were 68 days old. They have been read, and nothing had moved:**
+`gpt-5` is still $1.25 in and $10 out per million tokens, `gpt-5-mini` $0.25 and
+$2, `gpt-5-nano` $0.05 and $0.4. The date on that provider moves to 2026-08-31
+because the table was read, which is the only thing that ever moves a date here.
+
+Two traps on the way, both now written down beside the constant. The address had
+changed — `platform.openai.com/docs/pricing` redirects to
+`developers.openai.com` — and every note in this repository cited the old one, so
+a reviewer who stops at the redirect reads nothing and moves the date anyway. And
+the page publishes **four tables for the same model**: standard, batch, flex and
+priority. Reading the wrong one halves or doubles every figure. The standard
+table is identified by the other three being its multiples, not by trusting the
+order they appear in — an order is a layout decision somebody can change on a
+Tuesday.
+
+### The two that did not move, and why that is the honest answer
+
+`moonshot` and `xai` stay at 2026-06-24. Their pages are readable now; that
+blockage is gone. What is in the way instead is that **the models this catalogue
+prices are not on either page any more.** xAI publishes grok-4.3, 4.5, 4.6, 4.20
+and grok-build; there is no `grok-4`. Moonshot publishes kimi-k3, k2.7-code,
+k2.6, k2.5 and the V1 series; there is no `kimi-k2`.
+
+So the $3/$15 carried for `grok-4` and the $0.6/$2.5 carried for `kimi-k2` cannot
+be checked against anything, and a date that moved on that would certify a
+reading that never happened.
+
+Neither is marked retired either, and the restraint matters more than it looks.
+This project only records a model as retired when **the provider refuses a real
+request for that id**, quoting the provider's own sentence. Absence from a
+webpage is not a refusal, and writing one down without having received it would
+be inventing the provider's words to close a ticket. That is the same failure as
+inventing a price with a different hat on.
+
+Both need an API key for the availability check to ask and be told no. Until
+then the catalogue's own oldest-provider date goes on reading 2026-06-24 and
+saying so on every report that quotes it — which is exactly what it is for.
 
 ## 2.2.0 — Tested against inputs nobody wrote
 

@@ -1184,6 +1184,47 @@ second was case-sensitive and did not catch it; and an existing guard caught
 this work's own test bounding a section by its neighbour.
 
 
+## 2.4.0 — One door, and where the spend is — released
+
+The first release since 2.0.0 that adds commands, and the freeze at 46 is
+lifted on purpose rather than slipped past: [the plan](docs/plan-2.4.md)
+starts from about two hundred downloads a month behind forty-nine commands,
+names three causes and a move for each, and this release carries every move
+that did not need something this repository does not hold. `bill` is one door
+that reads anything the converters read and never guesses a shape.
+`from-openai` and `from-openrouter` read two more providers from their
+published schemas, and `reconcile` sets a receipt beside OpenAI's bill as well
+as Anthropic's. The README tells every MCP client how to install, the weekly
+bill has its cron recipe, and `adoption.mjs` writes the figures beside each
+version so the next plan starts from a number too. Cursor and Hugging Face
+stay named as blocked rather than written from memory.
+
+## 2.3.0 — The warning that cried wolf — released
+
+Three surfaces decided whether prices were stale from the catalogue's oldest
+provider, then printed a sentence saying the table behind *every dollar here*
+was reviewed on that date. On a report of Claude and OpenAI calls it was false
+by two months, and it fired on every run — which is the worse half, because a
+warning that always fires is one nobody reads on the day it is true.
+
+The skill was rewritten in the same release, for the same reason one level up:
+it described one door to a reader who might have any of four. An agent with an
+MCP client and no shell had been handed a document about a shell, and the MCP
+server — the whole product, for that reader — was mentioned nowhere in it. Its
+three new guards are derived from the code, and the first thing they caught was
+this file's own claim that three shipped converters were not built.
+
+
+## 2.2.1 — One price table read, two that no longer describe our models — released
+
+OpenAI's figures were re-read after 68 days and none had moved; the date moves
+because the reading happened. `moonshot` and `xai` stay where they were, because
+`grok-4` and `kimi-k2` are no longer on their providers' pricing pages at all —
+so their prices cannot be checked, and neither can be marked retired without a
+refusal this project has not received. Naming a blocked arc rather than closing
+it is the behaviour, not the exception.
+
+
 ## 2.2.0 — Tested against inputs nobody wrote — released
 
 Four thousand tests found nearly every defect this repository has ever fixed,
@@ -2647,10 +2688,18 @@ carry tests now that derive the claim from the code rather than trusting prose.
 
 ## Next
 
-**Nothing is planned.** [The 1.83–2.0 plan](docs/plan-1.83-2.0.md) asked a
-different question from every other plan in that directory — not what this
-should do next, but when it is finished — and 2.0.0 is the answer. The surface
-is frozen at 46 commands.
+**Nothing is planned that this repository can deliver alone.** [The 2.4
+plan](docs/plan-2.4.md) was the last thing planned, and 2.4.0 delivered every
+move of it that did not need something held outside this repository. [The
+1.83–2.0 plan](docs/plan-1.83-2.0.md) had asked a different question from
+every other plan in that directory — not what this should do next, but when
+it is finished — and 2.0.0 answered it by freezing the surface at 46
+commands. 2.4.0 lifted that freeze deliberately, from a download count rather
+than a feature wish, and the CLI stands at 51 commands. What remains of the
+2.4 plan waits on things outside this repository: a real Cursor export to
+build a converter against, a Hugging Face token for the Space, and the
+provider keys that would let two orphaned price rows be marked retired from
+the provider's own refusal.
 
 **2.1.0 came after that and this section did not change its mind.** It adds no
 command; it adds two fields to a published format and one function, so that a
@@ -2664,6 +2713,17 @@ this section says continues.** It adds no command and no analysis: thirty
 property suites, and one correction to a published function that those suites
 found. Testing what is already shipped is exactly what a repository standing at
 its own edge should be spending its effort on.
+
+**2.3.0 is a correction and a rewrite, and still no command.** The correction is
+that the stale-price warning on three surfaces named the catalogue's oldest
+provider rather than the providers a report actually used, so every run warned
+about prices read that week — which is both a wrong figure and a warning people
+learn to skip. The rewrite is the agent skill: it was written for a reader with
+a shell in this checkout, and Trazum reaches an agent through MCP and as a
+library too, so it now says which door you have before it says anything else.
+The function that lands with it, `reviewedForModels`, is the same shape as
+2.1.0's: one export, in service of a sentence the tool was already printing and
+could not justify.
 
 That is a real state rather than an omission, and this section says so plainly
 because the alternative is describing delivered work as forthcoming, which is

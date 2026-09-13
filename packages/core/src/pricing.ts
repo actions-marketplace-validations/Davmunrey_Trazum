@@ -32,13 +32,45 @@ import type { ModelPricing, PricingTier, TierCondition } from './types.js';
 export const PROVIDER_REVIEWED: Readonly<Record<string, string>> = Object.freeze({
   /* platform.claude.com/docs/en/about-claude/pricing, read 2026-08-27. */
   anthropic: '2026-08-27',
-  openai: '2026-06-24',
+  /*
+   * developers.openai.com/api/docs/pricing, read 2026-08-31.
+   *
+   * `platform.openai.com/docs/pricing` now 301s there, which is worth writing
+   * down: the old address is what every note about this catalogue cited, and a
+   * reviewer who stops at the redirect reads nothing.
+   *
+   * The page publishes four tables for the same model — standard, batch, flex
+   * and priority. The standard one is the catalogue's, identified by the other
+   * three being its multiples (0.5x, 0.5x, 2x) rather than by trusting the
+   * order they appear in.
+   */
+  openai: '2026-08-31',
   /* ai.google.dev/gemini-api/docs/pricing, read 2026-08-28. */
   google: '2026-08-28',
-  moonshot: '2026-06-24',
+  /*
+   * platform.kimi.ai/docs/pricing/chat (platform.moonshot.ai 301s there),
+   * read 2026-09-12. The page prices kimi-k3, kimi-k2.6, kimi-k2.7-code and
+   * its highspeed variant; `kimi-k2`, the one id this table carries, is no
+   * longer on it. Its price is kept because calls in somebody's log really
+   * happened at it, and it is not marked retired because that is recorded
+   * from the provider's own refusal to a request, which needs a key this
+   * repository does not hold. The newer models are not added: the page states
+   * no context window for any of them, and a context window this table did
+   * not read is a number it would be inventing.
+   */
+  moonshot: '2026-09-12',
   /* api-docs.deepseek.com/quick_start/pricing, read 2026-08-28. */
   deepseek: '2026-08-28',
-  xai: '2026-06-24',
+  /*
+   * docs.x.ai/docs/models, read 2026-09-12. The page prices grok-4.6, 4.5,
+   * 4.3 and the 4.20 family, each at two rates split at 200k prompt tokens;
+   * `grok-4`, the one id this table carries, is no longer on it. Kept and not
+   * marked retired, for the reasons given for kimi-k2 above. The newer models
+   * are not added: this table has no way to express a price that changes at
+   * 200k prompt tokens, and pricing a 300k-token call at the under-200k rate
+   * would understate it by half while looking exact.
+   */
+  xai: '2026-09-12',
   /*
    * `mistral.ai/pricing`, read 2026-08-28 — by a human, because the page
    * renders its table in the browser and serves a fetch only an FAQ example
@@ -367,7 +399,9 @@ export const MODELS: ModelPricing[] = [
     multipliers: { cacheRead: 0.1, cacheWrite5m: 1, cacheWrite1h: 1, batch: null },
     capability: 'mid',
     tier: 'sonnet',
-    notes: 'No batch API: the batch advisory stays quiet rather than offering a discount you cannot buy.',
+    notes:
+      'No batch API: the batch advisory stays quiet rather than offering a discount you cannot buy.'
+      + ' Not on the provider\'s pricing page as of 2026-09-12, which lists kimi-k3 and kimi-k2.6 instead; the price is the last one published for it.',
   },
 
   // ------------------------------------------------------------------------
@@ -463,6 +497,8 @@ export const MODELS: ModelPricing[] = [
     multipliers: { cacheRead: 0.25, cacheWrite5m: 1, cacheWrite1h: 1, batch: null },
     capability: 'large',
     tier: 'opus',
+    notes:
+      'Not on the provider\'s model page as of 2026-09-12, which lists grok-4.6 and later instead; the price is the last one published for it.',
   },
 
   // ------------------------------------------------------------------------
@@ -873,6 +909,70 @@ function describe(when: TierCondition): string {
     }
   }
   return `${windows.join(' and ')} UTC${when.weekdaysOnly ? ', Monday to Friday' : ''}`;
+}
+
+/**
+ * The date the prices behind one report were reviewed.
+ *
+ * ## The sentence this exists to make true
+ *
+ * `PRICING_LAST_REVIEWED` is the **oldest** provider's date, which is the right
+ * answer to *how old is this table* and the wrong answer to *how old are the
+ * prices in front of me*. Every surface that warns about staleness was using
+ * it, and the warning says, in these words, that the table behind **every
+ * dollar here** was last reviewed on that date.
+ *
+ * On 2026-08-31 that sentence was false on a report of Claude and OpenAI
+ * calls. It named 2026-06-24 — the date belonging to two models that appear in
+ * no such report and whose providers stopped listing them — while the prices
+ * actually used had been read four days and zero days earlier. A warning that
+ * fires on every run is one people stop reading, and a provenance that does
+ * not hold is the one thing this tool exists not to print.
+ *
+ * `trazum models` had already worked this out and prints the dates per
+ * provider, with the reason in a comment. The fix reached one surface and not
+ * the three that qualify a figure.
+ *
+ * ## What it returns, and the direction it errs in
+ *
+ * The oldest review date among the providers that actually priced these
+ * models. Where that cannot be established it returns the catalogue's own
+ * `lastReviewed`, which is the **conservative** direction: reporting a fresher
+ * date for a report containing a price of unknown provenance would be claiming
+ * provenance this table does not have.
+ *
+ * It cannot be established in three cases, all of which fall back:
+ *
+ * - **An overlay is in effect.** `--pricing` and `--pricing-live` replace
+ *   prices with numbers whose provenance is the overlay's own date, and
+ *   `PROVIDER_REVIEWED` describes the bundled table rather than theirs.
+ * - **A model the catalogue does not carry**, or one carrying no provider: a
+ *   price with no page behind it.
+ * - **A provider with no recorded review date.**
+ *
+ * The fallback is inside this function rather than at each call site on
+ * purpose. `isOffered` records why: the fifth call site is always the one
+ * written with only the first half of a two-part rule.
+ */
+export function reviewedForModels(
+  models: Iterable<string>,
+  catalogue: PricingCatalogue,
+): string {
+  /* An overlay's prices are not this table's, so this table's dates say
+     nothing about them. */
+  if (catalogue.lastReviewed !== PRICING_LAST_REVIEWED) return catalogue.lastReviewed;
+
+  let oldest: string | null = null;
+  for (const id of models) {
+    const model = catalogue.models.find((m) => m.id === id);
+    if (model?.provider === undefined) return catalogue.lastReviewed;
+    const date = PROVIDER_REVIEWED[model.provider];
+    if (date === undefined) return catalogue.lastReviewed;
+    if (oldest === null || date < oldest) oldest = date;
+  }
+  /* Nothing priced: there is no report-specific answer, so the table's own
+     date stands rather than an absence being read as freshness. */
+  return oldest ?? catalogue.lastReviewed;
 }
 
 /** Cheapest model of each capability tier, for recommendations. */

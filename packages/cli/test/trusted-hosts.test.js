@@ -60,6 +60,12 @@ const KINDS = new Set([
    * and a build that fetched it would be wrong, not slow.
    */
   'identifier, never fetched',
+  /**
+   * Asked by the maintenance script that checks whether a priced model id is
+   * still accepted. A credential is required and the answer is thrown away
+   * except for its status and its sentence; no customer request ever goes here.
+   */
+  'availability check, not a customer path',
   /** Appears only as an example, a placeholder or a test fixture. */
   'example',
 ]);
@@ -69,6 +75,16 @@ const HOSTS = {
   'https://api.openai.com': 'gateway upstream',
   'https://api.deepseek.com': 'gateway upstream',
   'https://api.mistral.ai': 'gateway upstream',
+
+  /*
+    Reached only by `scripts/check-model-availability.mjs`, which asks each
+    provider whether the ids this repository prices still exist. Neither is a
+    gateway upstream: the gateway fronts calls a customer makes, and nothing
+    here routes customer traffic to either. They are named as their own kind so
+    that stays true by inspection rather than by everyone remembering it.
+  */
+  'https://api.x.ai': 'availability check, not a customer path',
+  'https://api.moonshot.ai': 'availability check, not a customer path',
   'https://generativelanguage.googleapis.com': 'gateway upstream',
 
   'https://aiplatform.googleapis.com': 'model call, cannot be fronted',
@@ -81,6 +97,11 @@ const HOSTS = {
 
   'https://api.github.com': 'tooling, not a model call',
   'https://registry.npmjs.org': 'tooling, not a model call',
+  // Asked once, by `scripts/adoption.mjs`, for the line docs/releasing.md
+  // writes under a version: download counts and the registry's latest
+  // version. Public counters, no credential, never a prompt.
+  'https://api.npmjs.org': 'public data, no credential',
+  'https://registry.modelcontextprotocol.io': 'public data, no credential',
 
   // The JSON Schema dialect identifier inside every schema `trazum schema`
   // prints. An identifier by the spec, never fetched: nothing in this
@@ -92,6 +113,11 @@ const HOSTS = {
   'https://platform.openai.com': 'documentation link',
   'https://www.promptfoo.dev': 'documentation link',
   'https://github.com': 'documentation link',
+  // Where an image in a wiki page has to point. `scripts/build-wiki.mjs`
+  // rewrites relative `<img src>` to this host because a wiki is served from
+  // `/wiki/<Page>` and a repository-relative path is broken there. It is a
+  // destination this repository writes into text, never a request it makes.
+  'https://raw.githubusercontent.com': 'documentation link',
 
   'https://api.example': 'example',
   'https://api.github.test': 'example',

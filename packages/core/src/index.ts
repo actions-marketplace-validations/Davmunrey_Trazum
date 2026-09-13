@@ -224,11 +224,29 @@ export { otelRecords, looksLikeOtel } from './otel.js';
 export type { OtelConversion, OtelRecord } from './otel.js';
 export { litellmRecords, looksLikeLiteLlm } from './litellm.js';
 export type { LiteLlmConversion, LiteLlmRecord } from './litellm.js';
+export { anthropicCostReport, looksLikeAnthropicCost, reconcile } from './anthropic-cost.js';
+export type { AnthropicCostReading, BilledReading, Reconciliation } from './anthropic-cost.js';
+export { openaiCostReport, looksLikeOpenaiCost } from './openai-cost.js';
+export type { OpenaiCostReading } from './openai-cost.js';
+export { openaiUsageRecords, looksLikeOpenaiUsage } from './openai-usage.js';
+export { openrouterActivityRecords, looksLikeOpenrouterActivity } from './openrouter-activity.js';
+export type {
+  OpenrouterActivityConversion,
+  OpenrouterActivityRecord,
+  OpenrouterWorkspaceLabel,
+} from './openrouter-activity.js';
+export type { OpenaiUsageConversion, OpenaiUsageRecord, ProjectLabel } from './openai-usage.js';
+export { anthropicUsageRecords, looksLikeAnthropicUsage } from './anthropic-usage.js';
+export type {
+  AnthropicUsageConversion,
+  AnthropicUsageRecord,
+  WorkspaceLabel,
+} from './anthropic-usage.js';
 export { heliconeRecords, looksLikeHelicone } from './helicone.js';
 export type { HeliconeConversion, HeliconeRecord } from './helicone.js';
 export { langsmithRecords, looksLikeLangsmith } from './langsmith.js';
 export type { LangsmithConversion, LangsmithRecord } from './langsmith.js';
-export type { ClaudeCodeConversion, ClaudeCodeRecord } from './claude-code.js';
+export type { ClaudeCodeConversion, ClaudeCodeRecord, CwdLabel } from './claude-code.js';
 export { positionReport } from './position-report.js';
 export type {
   PositionDistance,
@@ -399,6 +417,7 @@ export {
   DEFAULT_MODEL,
   COST_MULTIPLIERS,
   PRICING_LAST_REVIEWED,
+  reviewedForModels,
   STALE_PRICING_DAYS,
   PROVIDER_REVIEWED,
   reviewAgeDays,

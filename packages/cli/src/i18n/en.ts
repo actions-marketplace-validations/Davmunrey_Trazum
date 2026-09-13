@@ -60,9 +60,14 @@ ${bold('USAGE')}
   trazum rollup <document...|dir> [--json] [--html-out <file>]
   trazum position <usage.jsonl>
   trazum receipt <usage.jsonl|dir> [--stamp] [-o <file>]
+  trazum bill <file|dir> [--label <name>] [--stamp] [-o <file>]
   trazum from-claude-code <file|dir> [--label <name>] [-o <file>]
   trazum from-otel <file|dir> [--label-from-service] [-o <file>]
   trazum from-litellm <file|dir> [-o <file>]
+  trazum from-anthropic <usage.json> [--label <name>] [--label-by-workspace <file>] [-o <file>]
+  trazum from-openai <usage.json> [--label <name>] [--label-by-project <file>] [-o <file>]
+  trazum from-openrouter <activity.json> [--label <name>] [--label-by-workspace <file>] [-o <file>]
+  trazum reconcile <receipt.json> --against <cost.json> [-o <file>]
   trazum from-helicone <file|dir> [-o <file>]
   trazum from-langsmith <file|dir> [-o <file>]
   trazum switch <usage.jsonl> --to <model> [--migration-usd <n>] [--cases <n>]
@@ -170,6 +175,82 @@ ${bold('OPTIONS FOR ownrate')}
   efficiency. Prints the figure and the pricing-overlay snippet to paste
   into trazum.config.json, so the model you run yourself becomes a
   first-class row in every report, priced by you and marked as such.
+
+${bold('OPTIONS FOR reconcile')}
+  --against <file>            The provider's cost report: Anthropic's
+                              GET /v1/organizations/cost_report or OpenAI's
+                              GET /v1/organization/costs, told apart by shape.
+  -o, --out <file>            Write the comparison there instead of stdout.
+
+  What Trazum computed beside what the provider billed, and never merged into
+  it: two price tables summed into one number is how a report becomes quietly
+  wrong. Fetch Anthropic's report with group_by[]=description, OpenAI's with
+  group_by[]=line_item, and the difference is attributed - what no token rate
+  covers, and for Anthropic what was batch-tier - leaving a remainder that is
+  the only figure worth arguing about. OpenAI's report never names batch, so
+  there it stays inside the remainder and the run says so. The windows must
+  line up or nothing is compared, and a currency with no rate is refused
+  rather than converted.
+
+${bold('OPTIONS FOR from-anthropic')}
+  --label <name>              The project this usage belongs to. The provider
+                              does not know your project names.
+  -o, --out <file>            Write the usage log there instead of stdout.
+
+  Anthropic's own usage report, read as a usage log. You fetch it yourself with
+  your own admin credential; this reads the answer, so Trazum never holds a
+  provider key. Ask for group_by[]=model, because a row without one cannot be
+  priced, and group_by[]=service_tier, because batch is billed at a discount
+  and pricing it from a catalogue rate would overstate the bill. Rows at any
+  other tier are left out and counted, web search requests are counted and
+  never priced from a token rate, and has_more says the bill is one page short.
+
+${bold('OPTIONS FOR from-openai')}
+  --label <name>              The project this usage belongs to. The provider
+                              does not know your project names.
+  --label-by-project <file>   One label per project id, as a JSON array of
+                              {"project": "proj_…", "label": "name"}. Exact
+                              match; --label is the fallback.
+  -o, --out <file>            Write the usage log there instead of stdout.
+
+  OpenAI's own usage report, read as a usage log, under the same arrangement
+  as from-anthropic: your curl, your admin key, and this reads the answer.
+  Ask for group_by[]=model, because a row without one cannot be priced, and
+  group_by[]=batch, because a batch job is billed at a discount and pricing it
+  from a catalogue rate would overstate the bill. Any service tier but default
+  is left out and named. Audio and image tokens are never priced at a text
+  rate: a row carrying them is reduced to its text part and the rest is
+  counted where you can see it.
+
+${bold('OPTIONS FOR bill')}
+  --label <name>              The project this usage belongs to, for the
+                              shapes that take one.
+  --stamp                     Stamp the receipt with the time it was written.
+  -o, --out <file>            Write the receipt there instead of stdout.
+
+  One door. Reads a file or a directory, tells each file's shape from its own
+  text - a Claude Code transcript, OTel spans, a LiteLLM, Helicone or LangSmith
+  export, an Anthropic, OpenAI or OpenRouter report, or a plain usage log -
+  converts it with the same converter the dedicated command uses, prices it,
+  and ends on the receipt. A file no shape claims is named, not guessed; a
+  file two shapes claim is named as ambiguous and left alone; a provider's
+  cost report is pointed at reconcile. Each file's line says how many rows
+  were left out, and the dedicated from-<shape> command says why.
+
+${bold('OPTIONS FOR from-openrouter')}
+  --label <name>              The project this usage belongs to.
+  --label-by-workspace <file> One label per workspace id, as a JSON array of
+                              {"workspace": "…", "label": "name"}. Exact
+                              match; --label is the fallback. Needs the report
+                              fetched with group_by=workspace.
+  -o, --out <file>            Write the usage log there instead of stdout.
+
+  OpenRouter's activity report (GET /api/v1/activity, management key, the last
+  thirty days), read as a usage log keyed by the same model slugs the
+  OpenRouter pricing overlay uses, so hundreds of models are priceable at
+  once. What OpenRouter charged is printed beside Trazum's figure and never
+  merged into it. Reasoning tokens are counted and not added, because the
+  schema does not say whether the completion count already holds them.
 
 ${bold('OPTIONS FOR from-helicone')}
   -o, --out <file>            Write the usage log there instead of stdout.
@@ -1796,6 +1877,164 @@ ${bold('EXAMPLES')}
     written: (file) => `Wrote ${file}.`,
   },
 
+  reconcile: {
+    noReceipt: () =>
+      'reconcile needs a receipt and a cost report: trazum reconcile receipt.json --against cost.json',
+    noReport: () =>
+      'reconcile needs --against <cost report>: the JSON from Anthropic\'s GET /v1/organizations/cost_report or OpenAI\'s GET /v1/organization/costs.',
+    receiptUnreadable: (file) => `${file}: not readable as JSON.`,
+    notAReceipt: (file) =>
+      `${file}: not a receipt. It needs total.usd and span.fromMs/toMs, which "trazum receipt" writes.`,
+    reportUnreadable: (file) => `${file}: not found.`,
+    notAReport: (file) =>
+      `${file}: not the JSON a cost report endpoint returns, Anthropic's or OpenAI's. Pass the response body whole.`,
+    summary: (computed, billed, difference) =>
+      `Trazum computed $${computed.toFixed(2)}; the provider billed $${billed.toFixed(2)}. Difference: $${difference.toFixed(2)}.`,
+    notTokens: (usd) =>
+      `$${usd.toFixed(2)} of that is billed for something no token rate covers: web search, code execution, session usage. Trazum prices tokens and never claimed to cover these.`,
+    batch: (usd) =>
+      `$${usd.toFixed(2)} of it is batch-tier, which from-anthropic leaves out rather than price at a catalogue rate.`,
+    remainder: (usd) =>
+      `$${usd.toFixed(2)} is left over, and it is the only figure here worth arguing about: the same standard-tier tokens priced two ways, or usage your log never saw. A negative one means Trazum priced more than you were charged, which is a stale rate in the direction that costs you money.`,
+    notAttributable: () =>
+      'The difference cannot be attributed: this report was not grouped by description, so no row says whether it was tokens, a web search or a batch. Add group_by[]=description.',
+    notAttributableByLineItem: () =>
+      'The difference cannot be attributed: this report was not grouped by line item, so no row says what the money was for. Add group_by[]=line_item.',
+    batchNotSeparable: () =>
+      'This report never says whether a line was a batch job, so a batch discount, if any, is inside that remainder rather than taken out of it.',
+    unknownUnit: (usd) =>
+      `$${usd.toFixed(2)} of the remainder is on line items whose unit is null: the report says no single unit applies, so it is neither counted as tokens nor as not. It is named here so the remainder does not stand on a unit nobody stated.`,
+    windowNotCovered: (fromComputed, toComputed, fromBilled, toBilled) =>
+      `These are not the same window. The receipt covers ${fromComputed} to ${toComputed}; the report covers ${fromBilled} to ${toBilled}. A receipt set against a bill for other days is a wrong number under a right title, so nothing was compared.`,
+    noBilledWindow: () => 'The cost report has no time buckets, so there is no window to compare against.',
+    otherCurrency: (list) =>
+      `The report carries ${list} beside USD. Summing two currencies into one total needs a rate, and inventing one is the thing this product exists not to do. Nothing was compared.`,
+    truncated: () =>
+      'The report says has_more: true, so the billed figure is one page short and the difference is understated by whatever you did not fetch.',
+    unreadableAmount: (count) =>
+      `${count} row(s) carried an amount that is not a number. They are counted, never read as zero: a zero would quietly shrink the bill.`,
+    written: (file) => `Wrote ${file}.`,
+  },
+
+  fromAnthropic: {
+    noPath: () =>
+      'from-anthropic needs the usage report your own curl produced: trazum from-anthropic usage.json --label billing',
+    notFound: (path) => `${path}: not found`,
+    summary: (buckets, rows) => `${buckets} time bucket(s), ${rows} usage row(s) read.`,
+    unnamedModel: (count) =>
+      `${count} row(s) named no model and are not in the output: the report was not grouped by model, so nothing on the row says what answered. Add group_by[]=model to the request.`,
+    nonStandardTier: (count) =>
+      `${count} row(s) were billed at a tier a catalogue rate is not the rate for (batch, priority, flex) and are not in the output. Pricing them from the standard rate would overstate the bill and look right doing it.`,
+    tierUnknown: () =>
+      'The report never named a service tier, so a batch row and a standard row are indistinguishable here. Everything was read as standard. Add group_by[]=service_tier if any of this usage is batched.',
+    webSearch: (count) =>
+      `${count} web search request(s) are in this report and in no line of the output: server tools are billed per request, not per token, so no token rate reaches them.`,
+    truncated: () =>
+      'The report says has_more: true. This is one page of several and a bill built from it is understated. Follow next_page until has_more is false, and convert each page.',
+    unparseable: () =>
+      'That is not the JSON GET /v1/organizations/usage_report/messages returns. Pass the response body whole, not a field of it.',
+    labelledByWorkspace: (count) =>
+      `${count} row(s) took their label from the workspace mapping.`,
+    unruledWorkspace: (count) =>
+      `${count} row(s) carried a workspace no rule names. They keep --label if you gave one and are unattributed if you did not: a workspace nobody wrote a rule for is better unattributed than attributed to a neighbour.`,
+    workspaceNotGrouped: () =>
+      'A workspace mapping was given and no row carried a workspace id, so the split you asked for was not made. Either the report was not grouped by workspace or this organisation uses only the default one, and nothing here can tell those apart. Add group_by[]=workspace_id.',
+    rulesUnreadable: (file) =>
+      `${file}: not readable as a workspace mapping. It is a JSON array of {"workspace": "wrkspc_…" | null, "label": "name"}.`,
+    ruleBad: (file, at) =>
+      `${file}: entry ${at} is not a rule. Each needs a "label" and a "workspace", which may be null for the default workspace but may not be missing: a missing field is a typo and null is a decision.`,
+    rulesEmpty: (file) =>
+      `${file}: no rules in it. You passed --label-by-workspace to narrow something, and an empty file would silently narrow nothing.`,
+    written: (file) => `Wrote ${file}.`,
+  },
+
+  fromOpenai: {
+    noPath: () =>
+      'from-openai needs the usage report your own curl produced: trazum from-openai usage.json --label billing',
+    notFound: (path) => `${path}: not found`,
+    summary: (buckets, rows, requests) =>
+      `${buckets} time bucket(s), ${rows} usage row(s) read, covering ${requests} request(s).`,
+    unnamedModel: (count) =>
+      `${count} row(s) named no model and are not in the output: the report was not grouped by model, so nothing on the row says what answered. Add group_by[]=model to the request.`,
+    batch: (count) =>
+      `${count} row(s) were batch jobs and are not in the output: batch is billed at a discount, and pricing it from a catalogue rate would overstate the bill and look right doing it.`,
+    batchUnknown: () =>
+      'The report never said whether anything was batch, so a batch row and a standard row are indistinguishable here. Everything was read as standard. Add group_by[]=batch if any of this usage is batched.',
+    nonDefaultTier: (count, tiers) =>
+      `${count} row(s) were at a service tier a catalogue rate is not the rate for (${tiers}) and are not in the output. The schema does not list the tiers, so they are named rather than guessed at.`,
+    tierUnknown: () =>
+      'The report never named a service tier. Everything was read as the default tier. Add group_by[]=service_tier if any of this usage runs on another.',
+    mixed: (rows, tokens, cacheWrites) =>
+      `${rows} row(s) carried audio or image tokens, which a text rate is not the rate for. Each was reduced to its text part; ${tokens} audio and image token(s) are in no line of the output${cacheWrites > 0 ? `, and ${cacheWrites} cache-write token(s) on those rows were left out too, because the report gives them no modality` : ''}.`,
+    unsplit: (count) =>
+      `${count} row(s) carried audio or image tokens and no text split to reduce them by, and are not in the output. Pricing them at a text rate would be a guess.`,
+    truncated: () =>
+      'The report says has_more: true. This is one page of several and a bill built from it is understated. Follow next_page until has_more is false, and convert each page.',
+    unparseable: () =>
+      'That is not the JSON GET /v1/organization/usage/completions returns. Pass the response body whole, not a field of it.',
+    labelledByProject: (count) => `${count} row(s) took their label from the project mapping.`,
+    unruledProject: (count) =>
+      `${count} row(s) carried a project no rule names. They keep --label if you gave one and are unattributed if you did not: a project nobody wrote a rule for is better unattributed than attributed to a neighbour.`,
+    projectNotGrouped: () =>
+      'A project mapping was given and no row carried a project id, so the split you asked for was not made. Add group_by[]=project_id.',
+    rulesUnreadable: (file) =>
+      `${file}: not readable as a project mapping. It is a JSON array of {"project": "proj_…", "label": "name"}.`,
+    ruleBad: (file, at) =>
+      `${file}: entry ${at} is not a rule. Each needs a "project" id and a "label", both non-empty strings.`,
+    rulesEmpty: (file) =>
+      `${file}: no rules in it. You passed --label-by-project to narrow something, and an empty file would silently narrow nothing.`,
+    written: (file) => `Wrote ${file}.`,
+  },
+
+  bill: {
+    noPath: () => 'bill needs a file or a directory to read: trazum bill ~/.claude/projects',
+    notFound: (path) => `${path}: not found`,
+    noFiles: (path) => `${path}: no .json, .jsonl or .ndjson files under it.`,
+    file: (path, shape, records, leftOut) =>
+      `${path}: ${shape}${records === null ? ', read as it is' : `, ${records} record(s)`}${leftOut > 0 ? `, ${leftOut} row(s) left out. Run trazum from-${shape} on it for the reasons.` : '.'}`,
+    unknown: (path) =>
+      `${path}: no shape this tool reads claims it, so it was not guessed at and is not in the bill.`,
+    ambiguous: (path, shapes) =>
+      `${path}: claimed by more than one shape (${shapes}), so it was not converted. Run the dedicated from-<shape> command on it and say which.`,
+    costReport: (path) =>
+      `${path}: a provider's cost report, which is a bill rather than usage. Set it beside a receipt with trazum reconcile.`,
+    nothingRead: () => 'Nothing here was a usage source this tool reads, so there is nothing to bill.',
+    sources: (read, seen) => `${read} of ${seen} file(s) read as usage.`,
+    pricingLiveHint: (count) =>
+      `${count} unpriced model id(s) are OpenRouter slugs, which the bundled catalogue does not carry. Run again with --pricing-live to price them from OpenRouter's own list.`,
+    written: (file) => `Wrote ${file}.`,
+  },
+
+  fromOpenrouter: {
+    noPath: () =>
+      'from-openrouter needs the activity report your own curl produced: trazum from-openrouter activity.json --label billing',
+    notFound: (path) => `${path}: not found`,
+    summary: (rows, days, requests) =>
+      `${rows} activity row(s) read over ${days} day(s), covering ${requests} request(s).`,
+    reportedUsage: (usd, byokUsd) =>
+      `OpenRouter says it charged $${usd.toFixed(4)}${byokUsd > 0 ? ` plus $${byokUsd.toFixed(4)} billed upstream on your own keys` : ''}. That figure is OpenRouter's, printed beside Trazum's and never merged into it: two price tables summed into one number is how a report becomes quietly wrong.`,
+    reasoning: (tokens) =>
+      `${tokens} reasoning token(s) are in this report and were not added to any record: the schema does not say whether completion_tokens already includes them, and adding them if it does would charge reasoning twice.`,
+    unnamedModel: (count) =>
+      `${count} row(s) named no model and are not in the output: nothing on the row says what answered.`,
+    undated: (count) =>
+      `${count} row(s) carried a date that is not a YYYY-MM-DD day and are not in the output.`,
+    unparseable: () =>
+      'That is not the JSON GET /api/v1/activity returns. Pass the response body whole, not a field of it.',
+    labelledByWorkspace: (count) => `${count} row(s) took their label from the workspace mapping.`,
+    unruledWorkspace: (count) =>
+      `${count} row(s) carried a workspace no rule names. They keep --label if you gave one and are unattributed if you did not.`,
+    workspaceNotGrouped: () =>
+      'A workspace mapping was given and no row carried a workspace id, so the split you asked for was not made. Fetch the report with group_by=workspace.',
+    rulesUnreadable: (file) =>
+      `${file}: not readable as a workspace mapping. It is a JSON array of {"workspace": "…", "label": "name"}.`,
+    ruleBad: (file, at) =>
+      `${file}: entry ${at} is not a rule. Each needs a "workspace" id and a "label", both non-empty strings.`,
+    rulesEmpty: (file) =>
+      `${file}: no rules in it. You passed --label-by-workspace to narrow something, and an empty file would silently narrow nothing.`,
+    written: (file) => `Wrote ${file}.`,
+  },
+
   fromHelicone: {
     noPath: () =>
       'from-helicone needs a request export or a directory: trazum from-helicone requests.json',
@@ -1871,6 +2110,10 @@ ${bold('EXAMPLES')}
     stateNeedsFile: () =>
       '--state reads one transcript, not a folder: the state ties an offset in the transcript to a length of the output, and several transcripts appending to one output have no single such length. Point it at the .jsonl file.',
     stateNeedsOut: () => '--state needs --out: there is nothing to resume against when the records go to stdout.',
+    cwdRulesUnreadable: (file) => `${file}: --label-by-cwd wants a JSON file holding a list, like [{"prefix": "/work/api", "label": "api"}].`,
+    cwdRuleBad: (file, at) => `${file}: entry ${at} needs a non-empty "prefix" and "label", both strings. Nothing is guessed from a path here, so an entry that is not a rule is refused rather than skipped.`,
+    cwdRulesEmpty: (file) => `${file}: no rules in it, so every line would fall back to --label or to nothing. Write a rule or drop the flag.`,
+    labelledByCwd: (rules) => `Labelled by working directory, ${rules} rule(s). The directory decides which of your labels applies and never reaches the output.`,
     resumed: (skipped, offset) =>
       skipped === 0
         ? `Read the transcript in full and recorded a resume point at byte ${offset}.`
