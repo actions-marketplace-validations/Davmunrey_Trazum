@@ -13,6 +13,60 @@ merged commit with no entry is a change only `git log` remembers.
 
 ### Changed
 
+- **The web app's routine dependencies moved (#532).** Dependabot's weekly
+  group in `apps/web`: `next` 16.3.3 to 16.3.5, `react`, `react-dom` and
+  `@types/react` to 19.3.0, `lucide-react` 1.35.0 to 1.46.0, `posthog-js`
+  1.422.5 to 1.433.4, `@types/node` 26.4.0 to 26.5.1. Minor and patch only,
+  every check green on the rebased head, and the same `sharp` move #533 had
+  already made. Recorded here because a merge with no entry is a change only
+  `git log` remembers, not because any of it changes what Trazum does.
+
+- **Both CodeQL entry points advanced to v4.38.0 in one commit, and
+  Dependabot now raises the pair as one pull request.** As at 4.37.9,
+  Dependabot raised `init` and `analyze` separately (#527, #529) and each was
+  red on its own, because `analyze` refuses a configuration file `init` wrote
+  at another version and `security.test.js` holds that the two pins agree.
+  The pins move together here, and `.github/dependabot.yml` gains a
+  `codeql` group over `github/codeql-action*` so the next bump arrives as
+  the one pull request the guard can pass.
+
+### Fixed
+
+- **The packaged Action pin in `README.md` and `docs/running.md` advanced to
+  2.4.1's release commit**, the one `v2.4.1` points at, in the pull request
+  after the release as `docs/releasing.md` says it must: `security.test.js`
+  asks git which version that commit declares and refuses any other.
+
+- **`sharp` moved from 0.35.3 to 0.35.4 in the lockfile**, with its `libvips`
+  binaries from 1.3.2 to 1.3.3, closing GHSA-rgj7-g3m4-5g8c (two libheif
+  advisories, rated high). It is Next's optional image dependency in
+  `apps/web`, reached at build time only, and no manifest changes: `next`'s
+  own range already allowed the fix and only the pinned transitive version
+  had not moved, which is the exact case SECURITY.md warns about. `npm audit`
+  over the whole tree reports 0 vulnerabilities after it.
+
+## 2.4.1 — The same door from the browser
+
+A patch, on the plan's own terms: 2.4.0 built one door, `trazum bill`, and
+this release makes the two other places a stranger arrives at open onto it.
+The README and the landing page now begin with the one line that works with
+nothing installed, and the web app's drop zone reads every shape the door
+reads instead of three of them. `bill` also names the flag that prices an
+OpenRouter slug. Nothing here adds a command; the count stays at 51.
+
+### Changed
+
+- **The browser's drop zone is the same door as `trazum bill`.** It read
+  three shapes (Claude Code transcripts, OTel spans, LiteLLM logs) and took
+  everything else as a plain usage log, so an OpenRouter activity report or
+  an OpenAI usage report dropped on it was told every line was unreadable.
+  It now detects and converts the five other shapes with the same core
+  detectors and converters the CLI uses, reports one line per shape with the
+  rows left out and the dedicated command that says why, and names a
+  provider's cost report as a bill rather than usage, pointing at
+  `reconcile`. Still nothing leaves the tab; `folder-ingest.test.mjs` holds
+  every arm to the core detector and converter.
+
 - **`bill` says which flag prices an OpenRouter slug.** When the receipt's
   unpriced gap holds a model id with a slash in it, which is how OpenRouter
   names models and which the bundled catalogue does not carry, the run ends
